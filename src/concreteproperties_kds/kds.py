@@ -45,6 +45,15 @@ STRESS_BLOCK_EPS_CU = [0.0033, 0.0032, 0.0031, 0.0030, 0.0029, 0.0028]
 STRESS_BLOCK_ETA = [1.00, 0.97, 0.95, 0.91, 0.87, 0.84]
 STRESS_BLOCK_BETA_1 = [0.80, 0.80, 0.76, 0.74, 0.72, 0.70]
 
+# 포물선-직선 응력-변형률 관계의 변수와 계수 (KDS 14 20 20 4.1.1(7), 표 4.1-1)
+# n, eps_co, eps_cu 는 식 (4.1-3)~(4.1-5) 로도 구할 수 있고 아래 표와 일치한다.
+# alpha(평균 압축응력 계수)와 beta(합력 위치 계수)는 표에만 주어져 있다.
+PARABOLIC_FCK = [40.0, 50.0, 60.0, 70.0, 80.0, 90.0]
+PARABOLIC_N = [2.00, 1.92, 1.50, 1.29, 1.22, 1.20]
+PARABOLIC_EPS_CO = [0.0020, 0.0021, 0.0022, 0.0023, 0.0024, 0.0025]
+PARABOLIC_ALPHA = [0.80, 0.78, 0.72, 0.67, 0.63, 0.59]
+PARABOLIC_BETA = [0.40, 0.40, 0.38, 0.37, 0.36, 0.35]
+
 # 철근 탄성계수 (KDS 14 20 10 4.3.3(2), 식 4.3-5) [MPa]
 ES = 200.0e3
 
@@ -81,6 +90,121 @@ def stress_block_parameters(fck: float) -> tuple[float, float, float]:
 
     return eps_cu, eta, beta_1
 
+
+def parabolic_parameters(fck: float) -> tuple[float, float, float, float, float]:
+    r"""포물선-직선 응력-변형률 관계의 변수와 계수를 반환한다.
+
+    **KDS 14 20 20 4.1.1(7), 식 (4.1-3)~(4.1-5), 표 4.1-1**
+
+    .. math::
+
+        n = 1.2 + 1.5\left(\frac{100 - f_{ck}}{60}\right)^{4} \leq 2.0
+
+        \varepsilon_{co} = 0.002 + \frac{f_{ck} - 40}{100{,}000} \geq 0.002
+
+        \varepsilon_{cu} = 0.0033 - \frac{f_{ck} - 40}{100{,}000} \leq 0.0033
+
+    :math:`\alpha` 는 압축응력의 평균값을 :math:`\alpha(0.85f_{ck})` 로 나타낼
+    때의 계수, :math:`\beta` 는 압축연단에서 합력 작용위치까지의 거리를
+    :math:`\beta c` 로 나타낼 때의 계수이다. 두 값은 식이 주어져 있지 않으므로
+    표 4.1-1 을 선형보간한다.
+
+    Args:
+        fck: 콘크리트 설계기준압축강도 :math:`f_{ck}` (MPa)
+
+    Raises:
+        ValueError: ``fck`` 가 90 MPa 를 초과하는 경우 (KDS 14 20 20 4.1.1(7)②
+            — 성능실험을 통한 조사연구로 값을 선정해야 한다)
+
+    Returns:
+        :math:`(n,\ \varepsilon_{co},\ \varepsilon_{cu},\ \alpha,\ \beta)`
+    """
+    if fck > 90:
+        msg = (
+            "fck 가 90 MPa 를 초과하면 KDS 14 20 20 4.1.1(7)② 에 따라 성능실험을 "
+            "통한 조사연구로 값을 선정하고 근거를 명시해야 합니다."
+        )
+        raise ValueError(msg)
+
+    n = min(2.0, 1.2 + 1.5 * ((100.0 - fck) / 60.0) ** 4)
+    eps_co = max(0.002, 0.002 + (fck - 40.0) / 100_000.0)
+    eps_cu = min(0.0033, 0.0033 - (fck - 40.0) / 100_000.0)
+
+    fck_c = max(fck, PARABOLIC_FCK[0])
+    alpha = float(interp1d(PARABOLIC_FCK, PARABOLIC_ALPHA)(fck_c))
+    beta = float(interp1d(PARABOLIC_FCK, PARABOLIC_BETA)(fck_c))
+
+    return n, eps_co, eps_cu, alpha, beta
+
+
+def parabolic_stress(fck: float, eps_c: float) -> float:
+    r"""포물선-직선 관계의 압축응력을 반환한다.
+
+    **KDS 14 20 20 4.1.1(7)①, 식 (4.1-1), (4.1-2)**
+
+    .. math::
+
+        f_c = 0.85 f_{ck}\left[1 - \left(1 - \frac{\varepsilon_c}
+        {\varepsilon_{co}}\right)^{n}\right]
+        \qquad (\varepsilon_c \leq \varepsilon_{co})
+
+        f_c = 0.85 f_{ck}
+        \qquad (\varepsilon_{co} < \varepsilon_c \leq \varepsilon_{cu})
+
+    Args:
+        fck: 콘크리트 설계기준압축강도 :math:`f_{ck}` (MPa)
+        eps_c: 콘크리트의 압축변형률 :math:`\varepsilon_c` (양수)
+
+    Returns:
+        압축응력 :math:`f_c` (MPa). :math:`\varepsilon_c \leq 0` 이면 0.
+    """
+    n, eps_co, eps_cu, _, _ = parabolic_parameters(fck=fck)
+
+    if eps_c <= 0:
+        return 0.0
+
+    if eps_c >= eps_co:
+        return 0.85 * fck
+
+    return 0.85 * fck * (1.0 - (1.0 - eps_c / eps_co) ** n)
+
+
+def parabolic_profile(fck: float, n_points: int = 24) -> ssp.ConcreteUltimateProfile:
+    r"""포물선-직선 관계를 극한 응력-변형률 프로파일로 만든다.
+
+    **KDS 14 20 20 4.1.1(7)**
+
+    KDS 는 등가직사각형 응력블록(4.1.1(8))과 포물선-직선 관계(4.1.1(7)) 중
+    어느 쪽을 써도 좋다고 규정한다. 이 함수는 후자를 단면 해석에 쓸 수 있는
+    형태로 돌려준다.
+
+    Args:
+        fck: 콘크리트 설계기준압축강도 :math:`f_{ck}` (MPa)
+        n_points: 상승 곡선부를 나눌 점의 개수. 기본값 ``24``.
+
+    Returns:
+        극한 응력-변형률 프로파일
+    """
+    _, eps_co, eps_cu, _, _ = parabolic_parameters(fck=fck)
+
+    # 인장측(음의 변형률)에 0 응력 점을 두지 않으면 첫 구간이 그대로 외삽되어
+    # 콘크리트가 인장을 부담하게 된다.
+    strains = [-eps_co, 0.0]
+    stresses = [0.0, 0.0]
+
+    for i in range(1, n_points + 1):
+        eps = eps_co * i / n_points
+        strains.append(eps)
+        stresses.append(parabolic_stress(fck=fck, eps_c=eps))
+
+    strains.append(eps_cu)
+    stresses.append(0.85 * fck)
+
+    return ssp.ConcreteUltimateProfile(
+        strains=strains,
+        stresses=stresses,
+        compressive_strength=fck,
+    )
 
 def elastic_modulus(fck: float, m_c: float = 2300.0) -> float:
     r"""콘크리트의 탄성계수를 반환한다.
@@ -327,6 +451,7 @@ class KDS14202022(DesignCode):
         lambda_c: float = 1.0,
         m_c: float = 2300.0,
         colour: str = "lightgrey",
+        ultimate_profile: str = "block",
     ) -> Concrete:
         r"""KDS 14 20 에 따른 콘크리트 재료 객체를 반환한다.
 
@@ -342,9 +467,11 @@ class KDS14202022(DesignCode):
             :math:`0.85 f_{ck}` 에서 일정 (사용하중 상태의 균열단면 해석은
             KDS 14 20 30 에 따라 선형탄성으로 가정)
 
-          - *극한 응력-변형률 관계*: 등가직사각형 응력블록, 압축응력
+          - *극한 응력-변형률 관계*: 기본값은 등가직사각형 응력블록, 압축응력
             :math:`\eta (0.85 f_{ck})`, 깊이 :math:`a = \beta_1 c`
-            (KDS 14 20 20 4.1.1(8), 표 4.1-2)
+            (KDS 14 20 20 4.1.1(8), 표 4.1-2). ``ultimate_profile="parabolic"``
+            을 주면 포물선-직선 관계 (KDS 14 20 20 4.1.1(7), 표 4.1-1) 를 쓴다.
+            KDS 는 둘 중 어느 쪽을 써도 좋다고 규정한다.
 
           - *파괴계수*: :math:`f_r = 0.63 \lambda \sqrt{f_{ck}}`
             (KDS 14 20 30 4.2.1)
@@ -355,16 +482,24 @@ class KDS14202022(DesignCode):
                 기본값 ``1.0``.
             m_c: 콘크리트의 단위질량 (kg/m\ :sup:`3`). 기본값 ``2300``.
             colour: 도시할 때 사용할 콘크리트의 색. 기본값 ``"lightgrey"``.
+            ultimate_profile: 극한 응력-변형률 관계. ``"block"`` (등가직사각형
+                응력블록, KDS 14 20 20 4.1.1(8)) 또는 ``"parabolic"``
+                (포물선-직선, 같은 조 4.1.1(7)). 기본값 ``"block"``.
 
         Raises:
             ValueError: ``compressive_strength`` 가 18 MPa 미만이거나 90 MPa 를
-                초과하는 경우
+                초과하는 경우, 또는 ``ultimate_profile`` 이 ``"block"`` 이나
+                ``"parabolic"`` 이 아닌 경우
 
         Returns:
             콘크리트 재료 객체
         """
         if compressive_strength < 18 or compressive_strength > 90:
             msg = "compressive_strength 는 18 MPa 이상 90 MPa 이하여야 합니다."
+            raise ValueError(msg)
+
+        if ultimate_profile not in ("block", "parabolic"):
+            msg = 'ultimate_profile 은 "block" 또는 "parabolic" 이어야 합니다.'
             raise ValueError(msg)
 
         name = f"fck {compressive_strength:.0f} MPa 콘크리트 (KDS 14 20)"
@@ -381,11 +516,15 @@ class KDS14202022(DesignCode):
                 ultimate_strain=eps_cu,
                 compressive_strength=0.85 * compressive_strength,
             ),
-            ultimate_stress_strain_profile=ssp.RectangularStressBlock(
-                compressive_strength=compressive_strength,
-                alpha=0.85 * eta,
-                gamma=beta_1,
-                ultimate_strain=eps_cu,
+            ultimate_stress_strain_profile=(
+                ssp.RectangularStressBlock(
+                    compressive_strength=compressive_strength,
+                    alpha=0.85 * eta,
+                    gamma=beta_1,
+                    ultimate_strain=eps_cu,
+                )
+                if ultimate_profile == "block"
+                else parabolic_profile(fck=compressive_strength)
             ),
             flexural_tensile_strength=f_r,
             colour=colour,

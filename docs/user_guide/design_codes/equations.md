@@ -67,6 +67,12 @@ $$\phi = \phi_c + (0.85 - \phi_c)
 |---|---|---|---|
 | $\varepsilon_{cu}$ = 0.0033 ($f_{ck}\le40$), 매 10 MPa 마다 0.0001 감소 | 압축연단 극한변형률 | 4.1.1(3) | `kds.stress_block_parameters` |
 | 압축응력 $= \eta(0.85 f_{ck})$, 깊이 $a = \beta_1 c$ | 등가직사각형 응력블록 | 4.1.1(8) | `kds.KDS14202022.create_concrete_material` |
+| $f_c = 0.85f_{ck}\left[1-(1-\varepsilon_c/\varepsilon_{co})^{n}\right]$ | 포물선-직선 상승부, 식 (4.1-1) | 4.1.1(7) | `kds.parabolic_stress` |
+| $f_c = 0.85f_{ck}$ ($\varepsilon_{co} < \varepsilon_c \le \varepsilon_{cu}$) | 포물선-직선 수평부, 식 (4.1-2) | 4.1.1(7) | `kds.parabolic_stress` |
+| $n = 1.2 + 1.5\left(\frac{100-f_{ck}}{60}\right)^{4} \le 2.0$ | 상승 곡선부 지수, 식 (4.1-3) | 4.1.1(7) | `kds.parabolic_parameters` |
+| $\varepsilon_{co} = 0.002 + \frac{f_{ck}-40}{100{,}000} \ge 0.002$ | 최대응력 도달 변형률, 식 (4.1-4) | 4.1.1(7) | `kds.parabolic_parameters` |
+| $\varepsilon_{cu} = 0.0033 - \frac{f_{ck}-40}{100{,}000} \le 0.0033$ | 극한변형률, 식 (4.1-5) | 4.1.1(7) | `kds.parabolic_parameters` |
+| $\alpha$, $\beta$ (평균 압축응력·합력 위치 계수) | 표 4.1-1 | 4.1.1(7) | `kds.parabolic_parameters` |
 | $\varepsilon_{cu}$, $\eta$, $\beta_1$ 표 | $f_{ck}$ = ≤40 / 50 / 60 / 70 / 80 / 90 | 표 4.1-2 | `kds.STRESS_BLOCK_*` |
 
 | $f_{ck}$ (MPa) | ≤40 | 50 | 60 | 70 | 80 | 90 |

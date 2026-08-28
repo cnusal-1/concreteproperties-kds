@@ -43,6 +43,11 @@ myst_enable_extensions = [
 ]
 myst_heading_anchors = 4
 
+# 노트북의 마크다운 셀은 조각 단위로 파싱되므로, 절 제목(##)으로 시작하는 셀마다
+# "문서가 H1 이 아닌 H2 로 시작한다"는 경고가 난다. 강의 노트북은 설명을 절마다
+# 나눠 담는 구성이라 이 경고가 정상 동작이다.
+suppress_warnings = ["myst.header"]
+
 # 노트북은 미리 실행된 출력을 그대로 쓴다 (빌드 시간과 재현성)
 nb_execution_mode = "off"
 nb_execution_timeout = 300
