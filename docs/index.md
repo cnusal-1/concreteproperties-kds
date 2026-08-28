@@ -23,9 +23,17 @@
 | [결과](user_guide/results.md) | 결과 객체와 후처리 |
 | [프리스트레스트 해석](user_guide/prestressed_analysis.md) | PSC 단면 해석 |
 | [설계기준](user_guide/design_codes.md) | 설계기준 모듈 개요 |
-| [KDS 14 20](user_guide/design_codes/kds.md) | **KDS 14 20 설계기준 모듈 상세** |
+| [KDS 14 20 — 휨 및 압축](user_guide/design_codes/kds.md) | **KDS 14 20 20 / 14 20 10 — 단면 해석의 중심** |
+| [KDS — 하중조합](user_guide/design_codes/kds_loads.md) | KDS 14 20 01 |
+| [KDS — 전단 및 비틀림](user_guide/design_codes/kds_shear.md) | KDS 14 20 22 |
+| [KDS — 사용성](user_guide/design_codes/kds_serviceability.md) | KDS 14 20 30 |
+| [KDS — 내구성](user_guide/design_codes/kds_durability.md) | KDS 14 20 40 |
+| [KDS — 철근상세·정착·이음](user_guide/design_codes/kds_detailing.md) | KDS 14 20 50, 52 |
+| [KDS — 세장 기둥](user_guide/design_codes/kds_slender.md) | KDS 14 20 20 4.4 |
+| [KDS — 프리스트레스트](user_guide/design_codes/kds_psc.md) | KDS 14 20 62 |
+| [KDS — 2축 휨 간략식](user_guide/design_codes/kds_biaxial.md) | Bresler 등 |
 | [가정](user_guide/assumptions.md) | 해석에 사용된 가정과 부호 규약 |
-| [예제](examples.md) | 실행 가능한 예제 8건 |
+| [예제](examples.md) | 실행 가능한 예제 17건 |
 | [API](api.md) | KDS 모듈 API 참조 |
 
 ## 설치
@@ -75,15 +83,19 @@ print(f"Mn = {u_res.m_x / 1e6:.1f} kN.m, phi = {phi:.3f}, "
 ## 주요 기능
 
 `concreteproperties` 의 기능 전체는 [사용자 가이드](user_guide.md#기능) 를 참고한다.
-KDS 모듈이 추가로 제공하는 것은 다음과 같다.
+KDS 모듈은 다음 9개 모듈로 구성된다.
 
-- KDS 14 20 10 4.3.3 의 콘크리트 탄성계수
-- KDS 14 20 20 표 4.1-1 의 등가직사각형 응력블록 계수 ($\varepsilon_{cu}$, $\eta$, $\beta_1$)
-- KDS 14 20 30 4.2.1 의 파괴계수
-- KDS 14 20 10 표 4.2-1 의 강도감소계수 (압축지배 / 변화구간 / 인장지배)
-- KDS 14 20 20 4.1.2 의 최대 설계 축강도로 절단된 P-M 상관도
-- KDS 14 20 20 4.1.2 의 휨부재 최소허용변형률 검토
-- KDS 14 20 20 4.2.2 의 최소 휨철근량
+| 모듈 | 대상 기준 | 주요 기능 |
+|---|---|---|
+| `kds` | KDS 14 20 10, 14 20 20 | 재료, 등가직사각형 응력블록, 강도감소계수, 설계 휨강도, P-M 상관도, 2축 휨 상관도, 최대 축강도, 연성·최소철근량 |
+| `loads` | KDS 14 20 01 | 하중조합 8종, 소요강도 |
+| `shear` | KDS 14 20 22 | $V_c$·$V_s$, 최소 전단철근량, 스터럽 간격, 비틀림 |
+| `serviceability` | KDS 14 20 30 | 유효단면2차모멘트, 장기처짐, 최소 두께, 처짐 한계, 균열 제어 |
+| `durability` | KDS 14 20 40 | 노출등급 16종, 최소 강도·물결합재비·피복 |
+| `detailing` | KDS 14 20 50, 52 | 최소 피복·간격, 정착길이, 표준갈고리, 겹침이음 |
+| `slender` | KDS 14 20 20 4.4 | 세장비, 모멘트확대계수, 임계좌굴하중 |
+| `psc` | KDS 14 20 62 | 허용응력, 프리스트레스 손실, $f_{ps}$, PSC 강도감소계수 |
+| `biaxial` | (문헌) | Bresler 등하중선법·역하중법, 엄밀해 비교 |
 
 ## 라이선스
 

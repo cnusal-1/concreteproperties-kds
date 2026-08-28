@@ -43,7 +43,7 @@ python -c "from concreteproperties_kds import KDS; print(KDS)"
 ## 설치 확인
 
 ```python
-from concreteproperties_kds import KDS, stress_block_parameters
+from concreteproperties_kds import KDS, check_shear, stress_block_parameters
 
 print(stress_block_parameters(fck=27))
 # (0.0033, 1.0, 0.8)
@@ -51,6 +51,9 @@ print(stress_block_parameters(fck=27))
 kds = KDS()
 print(kds.create_concrete_material(compressive_strength=27).name)
 # fck 27 MPa 콘크리트 (KDS 14 20)
+
+print(round(check_shear(v_u=200e3, fck=27, b_w=400, d=550).v_c / 1e3, 2))
+# 190.53
 ```
 
 ## 시험 실행
@@ -58,7 +61,7 @@ print(kds.create_concrete_material(compressive_strength=27).name)
 ```shell
 cd concreteproperties-kds
 PYTHONPATH=src python -m pytest tests/ -q
-# 36 passed
+# 184 passed
 ```
 
 ## CAD 파일에서 형상 가져오기

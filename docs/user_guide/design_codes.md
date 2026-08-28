@@ -14,6 +14,27 @@
 | NZSEE C5 평가지침 | `concreteproperties.design_codes.NZS3101` | 원 패키지 |
 | AS 5100 (호주, 교량) | — | 미구현 |
 
+## KDS 14 20 모듈 구성
+
+KDS 는 단면 해석뿐 아니라 하중조합·전단·사용성·내구성·상세까지 함께 제공한다.
+`kds` 모듈이 단면 해석의 중심이고, 나머지는 단면 요소망과 무관한 순수 함수
+모듈이다.
+
+| 모듈 | 대상 기준 | 문서 |
+|---|---|---|
+| `kds` | KDS 14 20 10, 14 20 20 (휨 및 압축) | [휨 및 압축](design_codes/kds.md) |
+| `loads` | KDS 14 20 01 (하중조합) | [하중조합](design_codes/kds_loads.md) |
+| `shear` | KDS 14 20 22 (전단 및 비틀림) | [전단 및 비틀림](design_codes/kds_shear.md) |
+| `serviceability` | KDS 14 20 30 (사용성) | [사용성](design_codes/kds_serviceability.md) |
+| `durability` | KDS 14 20 40 (내구성) | [내구성](design_codes/kds_durability.md) |
+| `detailing` | KDS 14 20 50, 52 (철근상세·정착·이음) | [철근상세·정착·이음](design_codes/kds_detailing.md) |
+| `slender` | KDS 14 20 20 4.4 (세장 기둥) | [세장 기둥](design_codes/kds_slender.md) |
+| `psc` | KDS 14 20 62 (프리스트레스트) | [프리스트레스트](design_codes/kds_psc.md) |
+| `biaxial` | (문헌 — 2축 휨 간략식) | [2축 휨 간략식](design_codes/kds_biaxial.md) |
+
+전체 설계 흐름을 하나로 엮은 예제는
+[`examples/17_종합설계.py`](../../examples/17_종합설계.py) 를 참고한다.
+
 ## 공통 사용법
 
 모든 설계기준 클래스는 `DesignCode` 를 상속하며 같은 흐름으로 사용한다.

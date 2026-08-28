@@ -1,7 +1,7 @@
 [project]
 name = "concreteproperties-kds"
 version = "0.1.0"
-description = "concreteproperties 를 KDS 14 20 (콘크리트구조 설계기준) 에 맞추어 사용하기 위한 설계기준 확장 패키지"
+description = "concreteproperties 를 KDS 14 20 (콘크리트구조 설계기준) 에 맞추어 사용하기 위한 설계기준 확장 패키지 — 휨·압축, 하중조합, 전단·비틀림, 사용성, 내구성, 철근상세, 세장 기둥, 프리스트레스트"
 readme = "README.md"
 requires-python = ">=3.11"
 keywords = [
