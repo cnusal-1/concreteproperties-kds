@@ -54,12 +54,17 @@ def code(text: str) -> nbformat.NotebookNode:
     return nbformat.v4.new_code_cell(src)
 
 
-def write(name: str, cells: list[nbformat.NotebookNode]) -> Path:
+def write(
+    name: str,
+    cells: list[nbformat.NotebookNode],
+    directory: Path | None = None,
+) -> Path:
     """노트북을 파일로 쓴다.
 
     Args:
         name: 파일 이름 (확장자 제외)
         cells: 셀 목록
+        directory: 저장할 디렉터리 (기본값 ``docs/examples``)
 
     Returns:
         생성된 노트북 경로
@@ -72,8 +77,9 @@ def write(name: str, cells: list[nbformat.NotebookNode]) -> Path:
     }
     nb.metadata["language_info"] = {"name": "python", "version": "3.12"}
 
-    EXAMPLES.mkdir(parents=True, exist_ok=True)
-    path = EXAMPLES / f"{name}.ipynb"
+    target = EXAMPLES if directory is None else directory
+    target.mkdir(parents=True, exist_ok=True)
+    path = target / f"{name}.ipynb"
     nbformat.write(nb, path)
 
     return path

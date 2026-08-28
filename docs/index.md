@@ -5,6 +5,7 @@
 installation
 user_guide
 examples
+lectures
 api
 ```
 
@@ -54,6 +55,7 @@ contributing
 | [설계식 목록](user_guide/design_codes/equations.md) | **구현한 설계식 전체와 KDS 조문·식 번호의 대응표** |
 | [가정](user_guide/assumptions.md) | 해석에 사용된 가정과 부호 규약 |
 | [예제](examples.md) | 실행 가능한 예제 17건 |
+| [강의 자료](lectures.md) | 강의용 노트북 — 왜 그런지를 그림으로 |
 | [API](api.md) | KDS 모듈 API 참조 |
 
 ## KDS 14 20 계열이란
