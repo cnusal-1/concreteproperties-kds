@@ -43,7 +43,7 @@ contributing
 | [프리스트레스트 해석](user_guide/prestressed_analysis.md) | PSC 단면 해석 |
 | [설계기준](user_guide/design_codes.md) | 설계기준 모듈 개요 |
 | [KDS 14 20 — 휨 및 압축](user_guide/design_codes/kds.md) | **KDS 14 20 20 / 14 20 10 — 단면 해석의 중심** |
-| [KDS — 하중조합](user_guide/design_codes/kds_loads.md) | KDS 14 20 01 |
+| [KDS — 하중조합](user_guide/design_codes/kds_loads.md) | KDS 14 20 10 4.2.2 |
 | [KDS — 전단 및 비틀림](user_guide/design_codes/kds_shear.md) | KDS 14 20 22 |
 | [KDS — 사용성](user_guide/design_codes/kds_serviceability.md) | KDS 14 20 30 |
 | [KDS — 내구성](user_guide/design_codes/kds_durability.md) | KDS 14 20 40 |

@@ -23,7 +23,7 @@ KDS 는 단면 해석뿐 아니라 하중조합·전단·사용성·내구성·�
 | 모듈 | 대상 기준 | 문서 |
 |---|---|---|
 | `kds` | KDS 14 20 10, 14 20 20 (휨 및 압축) | [휨 및 압축](design_codes/kds.md) |
-| `loads` | KDS 14 20 01 (하중조합) | [하중조합](design_codes/kds_loads.md) |
+| `loads` | KDS 14 20 10 4.2.2 (하중조합) | [하중조합](design_codes/kds_loads.md) |
 | `shear` | KDS 14 20 22 (전단 및 비틀림) | [전단 및 비틀림](design_codes/kds_shear.md) |
 | `serviceability` | KDS 14 20 30 (사용성) | [사용성](design_codes/kds_serviceability.md) |
 | `durability` | KDS 14 20 40 (내구성) | [내구성](design_codes/kds_durability.md) |
