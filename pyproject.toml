@@ -25,6 +25,21 @@ dependencies = [
 
 [project.optional-dependencies]
 test = ["pytest"]
+docs = [
+    "sphinx",
+    "furo",
+    "myst-nb",
+    "linkify-it-py",
+    "sphinx-copybutton",
+    "sphinxext-opengraph",
+    "matplotlib",
+]
+dev = [
+    "pytest",
+    "ruff",
+    "jupyter",
+    "nbformat",
+]
 
 [build-system]
 requires = ["hatchling"]

@@ -74,3 +74,19 @@ f_res, u_res, phi = code.ultimate_bending_capacity()  # 5) 해석
 
 향후 버전에서는 중립축 각도 대신 **하중각**(`m_x` 대 `m_y` 의 비)을 일정하게
 유지하는 방식이 도입될 예정이다.
+
+```{toctree}
+:hidden:
+:maxdepth: 1
+
+design_codes/kds
+design_codes/kds_loads
+design_codes/kds_shear
+design_codes/kds_serviceability
+design_codes/kds_durability
+design_codes/kds_detailing
+design_codes/kds_slender
+design_codes/kds_psc
+design_codes/kds_biaxial
+design_codes/equations
+```

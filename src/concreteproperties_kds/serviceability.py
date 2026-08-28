@@ -69,7 +69,9 @@ def effective_moment_of_inertia(
     i_g: float,
     i_cr: float,
 ) -> float:
-    r"""유효단면2차모멘트를 반환한다 (KDS 14 20 30 4.2.1, Branson 식).
+    r"""유효단면2차모멘트를 반환한다 (Branson 식).
+
+    **KDS 14 20 30 4.2.1(3), 식 (4.2-1)**
 
     .. math::
         I_e = \left(\frac{M_{cr}}{M_a}\right)^3 I_g
@@ -99,7 +101,9 @@ def long_term_deflection_factor(
     rho_prime: float = 0.0,
     duration: str = "5년이상",
 ) -> float:
-    r"""장기 추가처짐 계수를 반환한다 (KDS 14 20 30 4.2.1).
+    r"""장기 추가처짐 계수를 반환한다.
+
+    **KDS 14 20 30 4.2.1(5), 식 (4.2-4)**
 
     .. math::
         \lambda_\Delta = \frac{\xi}{1 + 50\rho'}
@@ -128,7 +132,9 @@ def total_deflection(
     rho_prime: float = 0.0,
     duration: str = "5년이상",
 ) -> tuple[float, float]:
-    r"""장기처짐을 포함한 전체 처짐을 반환한다 (KDS 14 20 30 4.2.1).
+    r"""장기처짐을 포함한 전체 처짐을 반환한다.
+
+    **KDS 14 20 30 4.2.1(5), (6)**
 
     .. math::
         \Delta_{total} = \Delta_{L} + (1 + \lambda_\Delta)\Delta_{D}
@@ -161,7 +167,9 @@ def minimum_thickness(
     fy: float = 400.0,
     m_c: float = 2300.0,
 ) -> float:
-    r"""처짐을 계산하지 않는 경우의 최소 두께를 반환한다 (KDS 14 20 30 표 4.2-1).
+    r"""처짐을 계산하지 않는 경우의 최소 두께를 반환한다.
+
+    **KDS 14 20 30 4.2.1(1), 표 4.2-1**
 
     표의 값은 보통중량콘크리트(:math:`m_c = 2300` kg/m\ :sup:`3`)와
     :math:`f_y = 400` MPa 철근을 사용한 부재에 대한 값이며, 다른 조건에는
@@ -211,7 +219,9 @@ def deflection_limit(
     span: float,
     condition: str = "바닥_비구조재없음",
 ) -> float:
-    r"""최대 허용처짐을 반환한다 (KDS 14 20 30 표 4.2-2).
+    r"""최대 허용처짐을 반환한다.
+
+    **KDS 14 20 30 4.2.1(6), 표 4.2-2**
 
     .. note::
 
@@ -237,7 +247,9 @@ def deflection_limit(
 
 
 def deflection_target(condition: str = "바닥_비구조재없음") -> str:
-    """허용처짐과 비교해야 할 처짐의 종류를 반환한다 (KDS 14 20 30 표 4.2-2).
+    """허용처짐과 비교해야 할 처짐의 종류를 반환한다.
+
+    **KDS 14 20 30 표 4.2-2**
 
     - ``"live"`` : 활하중 L 에 의한 즉시처짐
     - ``"attached"`` : 비구조 요소가 부착된 후에 발생하는 처짐
@@ -265,7 +277,9 @@ def max_bar_spacing(
     c_c: float,
     dry_environment: bool = True,
 ) -> float:
-    r"""균열 제어를 위한 휨철근의 최대 간격을 반환한다 (KDS 14 20 20 4.2.3(4)).
+    r"""균열 제어를 위한 휨철근의 최대 간격을 반환한다.
+
+    **KDS 14 20 20 4.2.3(4), 식 (4.2-3), (4.2-4)**
 
     .. math::
         s = 375\left(\frac{\kappa_{cr}}{f_s}\right) - 2.5 c_c
@@ -298,7 +312,9 @@ def max_bar_spacing(
 
 
 def service_steel_stress(fy: float) -> float:
-    r"""사용하중 상태의 인장철근 응력 근사값을 반환한다 (KDS 14 20 20 4.2.3(4)).
+    r"""사용하중 상태의 인장철근 응력 근사값을 반환한다.
+
+    **KDS 14 20 20 4.2.3(4)**
 
     .. math::
         f_s = \frac{2}{3} f_y
@@ -380,7 +396,9 @@ def check_deflection(
     duration: str = "5년이상",
     condition: str = "바닥_비구조재없음",
 ) -> DeflectionCheck:
-    r"""등분포하중을 받는 부재의 처짐을 검토한다 (KDS 14 20 30 4.2).
+    r"""등분포하중을 받는 부재의 처짐을 검토한다.
+
+    **KDS 14 20 30 4.2.1**
 
     처짐은 모멘트로부터 역산한 등가 등분포하중을 이용하여
 
@@ -456,7 +474,9 @@ def check_crack_control(
     fs: float | None = None,
     dry_environment: bool = True,
 ) -> tuple[float, float, bool]:
-    r"""균열 제어를 위한 철근 간격 조건을 검토한다 (KDS 14 20 20 4.2.3(4)).
+    r"""균열 제어를 위한 철근 간격 조건을 검토한다.
+
+    **KDS 14 20 20 4.2.3(4)**
 
     Args:
         bar_spacing: 배치된 휨철근의 중심 간격 (mm)
@@ -482,16 +502,17 @@ def shrinkage_temperature_reinforcement(
     a_g: float,
     width: float = 1000.0,
 ) -> float:
-    r"""건조수축·온도철근량을 반환한다 (KDS 14 20 50 4.6.2).
+    r"""건조수축·온도철근량을 반환한다.
+
+    **KDS 14 20 50 4.6.2(1), (2)**
 
     1방향 철근콘크리트 슬래브의 수축·온도철근비는 다음 값 이상이어야 하나,
     어떤 경우에도 0.0014 이상이어야 한다.
 
     .. math::
-
-ho = egin{cases}
-        0.0020 & f_y \le 400 	ext{ MPa} \
-        0.0020 	imes \dfrac{400}{f_y} & f_y > 400 	ext{ MPa}
+        \rho = \begin{cases}
+        0.0020 & f_y \le 400 \text{ MPa} \\
+        0.0020 \times \dfrac{400}{f_y} & f_y > 400 \text{ MPa}
         \end{cases}
 
     다만 단위 폭 1 m 당 1,800 mm\ :sup:`2` 보다 크게 취할 필요는 없다.
@@ -516,7 +537,9 @@ ho = egin{cases}
 
 
 def shrinkage_temperature_spacing(thickness: float) -> float:
-    """수축·온도철근의 최대 간격을 반환한다 (KDS 14 20 50 4.6.2(3)).
+    """수축·온도철근의 최대 간격을 반환한다.
+
+    **KDS 14 20 50 4.6.2(3)**
 
     슬래브 두께의 5배 이하, 또한 450 mm 이하로 한다.
 
@@ -535,7 +558,9 @@ def cracking_moment(
     y_t: float,
     lambda_c: float = 1.0,
 ) -> float:
-    r"""균열모멘트를 반환한다 (KDS 14 20 30 4.2.1).
+    r"""균열모멘트를 반환한다.
+
+    **KDS 14 20 30 4.2.1(3), 식 (4.2-2)**
 
     .. math::
         M_{cr} = \frac{f_r I_g}{y_t}, \qquad f_r = 0.63\lambda\sqrt{f_{ck}}

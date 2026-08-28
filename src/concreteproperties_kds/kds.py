@@ -59,7 +59,9 @@ ALPHA_MAX_SPIRAL = 0.85  # 나선철근 기둥
 
 
 def stress_block_parameters(fck: float) -> tuple[float, float, float]:
-    r"""등가직사각형 응력블록의 계수를 반환한다 (KDS 14 20 20 표 4.1-2).
+    r"""등가직사각형 응력블록의 계수를 반환한다.
+
+    **KDS 14 20 20 4.1.1(8), 표 4.1-2**
 
     표에 없는 중간 강도는 선형보간하며, :math:`f_{ck} \leq 40` MPa 인 경우
     :math:`\varepsilon_{cu} = 0.0033`, :math:`\eta = 1.00`, :math:`\beta_1 = 0.80`
@@ -81,7 +83,9 @@ def stress_block_parameters(fck: float) -> tuple[float, float, float]:
 
 
 def elastic_modulus(fck: float, m_c: float = 2300.0) -> float:
-    r"""콘크리트의 탄성계수를 반환한다 (KDS 14 20 10 4.3.3).
+    r"""콘크리트의 탄성계수를 반환한다.
+
+    **KDS 14 20 10 4.3.3, 식 (4.3-1), (4.3-2), (4.3-3)**
 
     .. math::
         E_c = 0.077 \, m_c^{1.5} \sqrt[3]{f_{cm}}
@@ -116,7 +120,9 @@ def elastic_modulus(fck: float, m_c: float = 2300.0) -> float:
 
 
 def modulus_of_rupture(fck: float, lambda_c: float = 1.0) -> float:
-    r"""콘크리트의 파괴계수(휨인장강도)를 반환한다 (KDS 14 20 30 4.2.1).
+    r"""콘크리트의 파괴계수(휨인장강도)를 반환한다.
+
+    **KDS 14 20 30 4.2.1(3)**
 
     .. math::
         f_r = 0.63 \lambda \sqrt{f_{ck}}
@@ -133,7 +139,9 @@ def modulus_of_rupture(fck: float, lambda_c: float = 1.0) -> float:
 
 
 def compression_controlled_strain_limit(fy: float) -> float:
-    r"""압축지배변형률한계를 반환한다 (KDS 14 20 20 4.1.2).
+    r"""압축지배변형률한계를 반환한다.
+
+    **KDS 14 20 20 4.1.2(3)**
 
     균형변형률상태에서의 최외단 인장철근의 순인장변형률, 즉 철근의 항복변형률
     :math:`\varepsilon_y = f_y / E_s` 이다.
@@ -148,7 +156,9 @@ def compression_controlled_strain_limit(fy: float) -> float:
 
 
 def tension_controlled_strain_limit(fy: float) -> float:
-    r"""인장지배변형률한계를 반환한다 (KDS 14 20 20 4.1.2).
+    r"""인장지배변형률한계를 반환한다.
+
+    **KDS 14 20 20 4.1.2(4)**
 
     :math:`f_y \leq 400` MPa 인 경우 0.005, :math:`f_y > 400` MPa 인 경우
     철근 항복변형률의 2.5배로 한다.
@@ -166,7 +176,9 @@ def tension_controlled_strain_limit(fy: float) -> float:
 
 
 def minimum_net_tensile_strain(fy: float) -> float:
-    r"""휨부재의 최소허용 순인장변형률을 반환한다 (KDS 14 20 20 4.1.2).
+    r"""휨부재의 최소허용 순인장변형률을 반환한다.
+
+    **KDS 14 20 20 4.1.2(5)**
 
     계수 축력이 :math:`0.10 f_{ck} A_g` 보다 작은 휨부재의 최외단 인장철근의
     순인장변형률은 :math:`f_y \leq 400` MPa 인 경우 0.004 이상,
@@ -185,7 +197,9 @@ def minimum_net_tensile_strain(fy: float) -> float:
 
 
 def minimum_flexural_moment(m_cr: float) -> float:
-    r"""휨부재가 확보해야 할 최소 설계휨강도를 반환한다 (KDS 14 20 20 4.2.2).
+    r"""휨부재가 확보해야 할 최소 설계휨강도를 반환한다.
+
+    **KDS 14 20 20 4.2.2(1), 식 (4.2-1)**
 
     .. math::
         \phi M_n \ge 1.2 M_{cr}
@@ -202,7 +216,9 @@ def minimum_flexural_moment(m_cr: float) -> float:
 
 
 def minimum_flexural_moment_alternative(m_u: float) -> float:
-    r"""최소 철근량 규정의 대체 조건을 반환한다 (KDS 14 20 20 4.2.2(2)).
+    r"""최소 철근량 규정의 대체 조건을 반환한다.
+
+    **KDS 14 20 20 4.2.2(2), 식 (4.2-2)**
 
     해석에 필요한 철근량보다 1/3 이상 인장철근을 더 배치하여
 
@@ -426,6 +442,8 @@ class KDS14202022(DesignCode):
     def squash_tensile_load(self) -> tuple[float, float]:
         r"""단면의 순수압축 하중과 순수인장 하중을 계산한다.
 
+        **KDS 14 20 20 4.1.2(7)**
+
         KDS 14 20 20 4.1.2 의 공칭 축강도
 
         .. math::
@@ -462,7 +480,9 @@ class KDS14202022(DesignCode):
         return squash_load, tensile_load
 
     def max_axial_strength(self) -> tuple[float, float]:
-        r"""최대 설계 축강도를 계산한다 (KDS 14 20 20 4.1.2).
+        r"""최대 설계 축강도를 계산한다.
+
+        **KDS 14 20 20 4.1.2(7), 식 (4.1-16), (4.1-17)**
 
         .. math::
             \phi P_{n,max} = \alpha \phi
@@ -486,6 +506,8 @@ class KDS14202022(DesignCode):
         d_n: float,
     ) -> float:
         r"""최외단 인장철근의 순인장변형률 :math:`\varepsilon_t` 를 계산한다.
+
+        **KDS 14 20 20 4.1.2(3)**
 
         .. math::
             \varepsilon_t = \varepsilon_{cu} \frac{d_t - c}{c}
@@ -519,7 +541,9 @@ class KDS14202022(DesignCode):
         self,
         eps_t: float,
     ) -> float:
-        r"""강도감소계수를 반환한다 (KDS 14 20 10 4.3.3(2)).
+        r"""강도감소계수를 반환한다.
+
+        **KDS 14 20 10 4.3.3(2)**
 
         최외단 인장철근의 순인장변형률 :math:`\varepsilon_t` 에 따라
 
@@ -549,7 +573,9 @@ class KDS14202022(DesignCode):
         self,
         eps_t: float,
     ) -> str:
-        r"""단면의 분류를 반환한다 (KDS 14 20 20 4.1.2).
+        r"""단면의 분류를 반환한다.
+
+        **KDS 14 20 20 4.1.2(3), (4)**
 
         Args:
             eps_t: 최외단 인장철근의 순인장변형률
@@ -570,7 +596,9 @@ class KDS14202022(DesignCode):
         theta: float = 0,
         n_design: float = 0,
     ) -> tuple[float, float, bool]:
-        r"""휨부재의 최소허용변형률 조건을 검토한다 (KDS 14 20 20 4.1.2).
+        r"""휨부재의 최소허용변형률 조건을 검토한다.
+
+        **KDS 14 20 20 4.1.2(5)**
 
         계수 축력이 :math:`0.10 f_{ck} A_g` 보다 작은 휨부재는 최외단 인장철근의
         순인장변형률이 최소허용변형률 이상이어야 한다.
@@ -597,7 +625,9 @@ class KDS14202022(DesignCode):
         m_u: float | None = None,
         **kwargs,
     ) -> tuple[float, float, float, bool]:
-        r"""휨부재의 최소 철근량 조건을 검토한다 (KDS 14 20 20 4.2.2).
+        r"""휨부재의 최소 철근량 조건을 검토한다.
+
+        **KDS 14 20 20 4.2.2**
 
         .. math::
             \phi M_n \ge 1.2 M_{cr}
@@ -641,6 +671,8 @@ class KDS14202022(DesignCode):
         n_design: float = 0,
     ) -> tuple[res.UltimateBendingResults, res.UltimateBendingResults, float]:
         r"""KDS 14 20 의 강도감소계수를 적용한 설계 휨강도를 계산한다.
+
+        **KDS 14 20 10 4.3.3(2), KDS 14 20 20 4.1**
 
         강도감소계수 :math:`\phi` 는 최외단 인장철근의 순인장변형률에 의존하고,
         순인장변형률은 다시 공칭 축력 :math:`N_u = N_d / \phi` 에 의존하므로
@@ -754,6 +786,8 @@ class KDS14202022(DesignCode):
     ) -> tuple[res.MomentInteractionResults, res.MomentInteractionResults, list[float]]:
         r"""KDS 14 20 의 강도감소계수를 적용한 P-M 상관도를 생성한다.
 
+        **KDS 14 20 10 4.3.3(2), KDS 14 20 20 4.1.2(7)**
+
         공칭 상관도의 각 점에서 최외단 인장철근의 순인장변형률을 구하고, 그에
         대응하는 강도감소계수를 곱하여 설계 상관도를 만든다. 압축측은
         KDS 14 20 20 4.1.2 의 최대 설계 축강도로 절단된다.
@@ -865,6 +899,8 @@ class KDS14202022(DesignCode):
         progress_bar: bool = True,
     ) -> tuple[res.BiaxialBendingResults, list[float]]:
         r"""KDS 14 20 의 강도감소계수를 적용한 2축 휨 상관도를 생성한다.
+
+        **KDS 14 20 10 4.3.3(2)**
 
         Args:
             n_design: 계수 축력 :math:`N_d`. 기본값 ``0``.

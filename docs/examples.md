@@ -1,5 +1,42 @@
 # 예제
 
+## 노트북
+
+아래 노트북은 모두 실행된 출력이 포함되어 있다. 저장소에서 직접 열어 실행할 수도
+있다.
+
+```{toctree}
+:maxdepth: 1
+
+examples/01_materials
+examples/02_area_properties
+examples/03_cracked_properties
+examples/04_ultimate_bending
+examples/05_moment_interaction
+examples/06_biaxial_bending
+examples/07_moment_curvature
+examples/08_stress_analysis
+examples/09_loads
+examples/10_shear_torsion
+examples/11_serviceability
+examples/12_durability
+examples/13_detailing
+examples/14_slender_column
+examples/15_biaxial_simplified
+examples/16_prestressed
+examples/17_full_design
+```
+
+노트북은 `scripts/build_notebooks.py` 로 생성한다. 노트북을 직접 고치지 말고
+생성 스크립트를 고친 뒤 다시 생성한다.
+
+```shell
+cd scripts
+python build_notebooks.py --run
+```
+
+## 스크립트
+
 `examples/` 디렉터리의 예제는 모두 단독 실행 가능하다. 모든 예제는 `--plot` 인자를
 주면 그림도 함께 그린다.
 

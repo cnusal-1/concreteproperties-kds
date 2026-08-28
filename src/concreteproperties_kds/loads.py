@@ -37,7 +37,7 @@ LIVE_LOAD_FACTOR_REDUCED = 0.5
 def alpha_h(depth: float) -> float:
     r"""연직방향 토압에 대한 보정계수 :math:`\alpha_H` 를 반환한다.
 
-    KDS 14 20 10 4.2.2(1)
+    **KDS 14 20 10 4.2.2(1)**
 
     .. math::
         \alpha_H = \begin{cases}

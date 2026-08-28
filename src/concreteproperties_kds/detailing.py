@@ -104,9 +104,11 @@ def minimum_cover(
     bar: str | None = None,
     fck: float | None = None,
 ) -> float:
-    """현장치기 콘크리트의 최소 피복두께를 반환한다 (KDS 14 20 50 4.3.1).
+    r"""현장치기 콘크리트의 최소 피복두께를 반환한다.
 
-    :math:`f_{ck} \\ge 40` MPa 인 경우 **옥내 보·기둥**에 한하여 10 mm 를
+    **KDS 14 20 50 4.3.1(1)**
+
+    :math:`f_{ck} \\ge 40` MPa 인 경우 **옥내 보·기둥**\ 에 한하여 10 mm 를
     저감할 수 있다.
 
     Args:
@@ -158,7 +160,9 @@ def minimum_bar_spacing(
     aggregate_size: float | None = None,
     member: str = "보",
 ) -> float:
-    """철근의 최소 순간격을 반환한다 (KDS 14 20 50 4.2).
+    """철근의 최소 순간격을 반환한다.
+
+    **KDS 14 20 50 4.2**
 
     보 : :math:`\\max(d_b,\\ 25\\ \\text{mm},\\ 4/3 \\times \\text{굵은골재 최대치수})`
 
@@ -200,7 +204,9 @@ def development_length_tension(
     favourable_spacing: bool = True,
     excess_reinforcement: float = 1.0,
 ) -> float:
-    r"""인장 이형철근의 정착길이를 반환한다 (KDS 14 20 52 4.1.2(2)).
+    r"""인장 이형철근의 정착길이를 반환한다.
+
+    **KDS 14 20 52 4.1.2(2), 식 (4.1-1), 표 4.1-1**
 
     기본정착길이 (식 4.1-1)
 
@@ -209,18 +215,20 @@ def development_length_tension(
 
     에 표 4.1-1 의 보정계수를 곱한다.
 
-    +-------------------------------------------+----------------+----------------+
-    | 조건                                      | D19 이하       | D22 이상       |
-    +===========================================+================+================+
-    | 순간격 :math:`\ge d_b`, 피복 :math:`\ge`  | :math:`0.8`    | :math:`\alpha` |
-    | :math:`d_b`, 최소 스터럽·띠철근 배치;     | :math:`\alpha` | :math:`\beta`  |
-    | 또는 순간격 :math:`\ge 2d_b`, 피복        | :math:`\beta`  |                |
-    | :math:`\ge d_b`                           |                |                |
-    +-------------------------------------------+----------------+----------------+
-    | 기타                                      | :math:`1.2`    | :math:`1.5`    |
-    |                                           | :math:`\alpha` | :math:`\alpha` |
-    |                                           | :math:`\beta`  | :math:`\beta`  |
-    +-------------------------------------------+----------------+----------------+
+    .. list-table:: 표 4.1-1 보정계수
+       :header-rows: 1
+       :widths: 46 27 27
+
+       * - 조건
+         - D19 이하·이형철선
+         - D22 이상
+       * - 순간격 :math:`\ge d_b`, 피복 :math:`\ge d_b`, 최소 스터럽·띠철근
+           배치; 또는 순간격 :math:`\ge 2d_b`, 피복 :math:`\ge d_b`
+         - :math:`0.8\alpha\beta`
+         - :math:`\alpha\beta`
+       * - 기타
+         - :math:`1.2\alpha\beta`
+         - :math:`1.5\alpha\beta`
 
     :math:`\alpha` 는 철근배치 위치계수(상부철근 1.3, 기타 1.0),
     :math:`\beta` 는 도막계수(피복 :math:`< 3d_b` 또는 순간격 :math:`< 6d_b`
@@ -272,7 +280,9 @@ def development_length_tension_detailed(
     epoxy_coated: bool = False,
     excess_reinforcement: float = 1.0,
 ) -> float:
-    r"""인장 이형철근의 정착길이를 반환한다 (KDS 14 20 52 4.1, 정밀식).
+    r"""인장 이형철근의 정착길이를 반환한다 (정밀식).
+
+    **KDS 14 20 52 4.1.2(3), 식 (4.1-2)**
 
     .. math::
         l_d = \frac{0.90 d_b f_y}{\lambda\sqrt{f_{ck}}}
@@ -327,7 +337,9 @@ def development_length_compression(
     excess_reinforcement: float = 1.0,
     confined: bool = False,
 ) -> float:
-    r"""압축 이형철근의 정착길이를 반환한다 (KDS 14 20 52 4.2).
+    r"""압축 이형철근의 정착길이를 반환한다.
+
+    **KDS 14 20 52 4.1.3, 식 (4.1-3)**
 
     .. math::
         l_{dc} = \max\left(\frac{0.25 d_b f_y}{\lambda\sqrt{f_{ck}}},\
@@ -368,7 +380,9 @@ def development_length_hook(
     confined: bool = False,
     excess_reinforcement: float = 1.0,
 ) -> float:
-    r"""표준갈고리를 갖는 인장 이형철근의 정착길이를 반환한다 (KDS 14 20 52 4.3).
+    r"""표준갈고리를 갖는 인장 이형철근의 정착길이를 반환한다.
+
+    **KDS 14 20 52 4.1.5**
 
     .. math::
         l_{dh} = \frac{0.24 \beta d_b f_y}{\lambda\sqrt{f_{ck}}}
@@ -414,7 +428,9 @@ def lap_splice_tension(
     l_d: float,
     splice_class: str = "B",
 ) -> float:
-    r"""인장 겹침이음 길이를 반환한다 (KDS 14 20 52 4.5).
+    r"""인장 겹침이음 길이를 반환한다.
+
+    **KDS 14 20 52 4.5**
 
     - A급 이음 : :math:`1.0 l_d` — 배치 철근량이 소요 철근량의 2배 이상이고,
       겹침이음된 철근량이 전체의 1/2 이하
@@ -447,7 +463,9 @@ def lap_splice_compression(
     fck: float,
     l_dc: float | None = None,
 ) -> float:
-    r"""압축 겹침이음 길이를 반환한다 (KDS 14 20 52 4.5).
+    r"""압축 겹침이음 길이를 반환한다.
+
+    **KDS 14 20 52 4.5**
 
     .. math::
         l_s = \begin{cases}

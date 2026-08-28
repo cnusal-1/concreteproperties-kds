@@ -39,7 +39,9 @@ def concrete_shear_strength(
     v_u: float | None = None,
     m_u: float | None = None,
 ) -> float:
-    r"""콘크리트가 부담하는 전단강도 :math:`V_c` 를 반환한다 (KDS 14 20 22 4.2.1).
+    r"""콘크리트가 부담하는 전단강도 :math:`V_c` 를 반환한다.
+
+    **KDS 14 20 22 4.2.1, 식 (4.2-1), (4.2-2), (4.2-3), (4.2-6)**
 
     간편식
 
@@ -118,7 +120,9 @@ def shear_reinforcement_strength(
     s: float,
     alpha: float = 90.0,
 ) -> float:
-    r"""전단철근이 부담하는 전단강도 :math:`V_s` 를 반환한다 (KDS 14 20 22 4.3.4).
+    r"""전단철근이 부담하는 전단강도 :math:`V_s` 를 반환한다.
+
+    **KDS 14 20 22 4.3.4, 식 (4.3-3), (4.3-4)**
 
     수직스터럽 (:math:`\alpha = 90^\circ`)
 
@@ -160,7 +164,9 @@ def max_shear_reinforcement_strength(
     b_w: float,
     d: float,
 ) -> float:
-    r"""전단철근이 부담할 수 있는 전단강도의 상한을 반환한다 (KDS 14 20 22 4.3.4(9)).
+    r"""전단철근이 부담할 수 있는 전단강도의 상한을 반환한다.
+
+    **KDS 14 20 22 4.3.4(9)**
 
     .. math::
         V_s \le \frac{2}{3}\sqrt{f_{ck}}\, b_w d
@@ -182,7 +188,9 @@ def minimum_shear_reinforcement(
     s: float,
     fyt: float,
 ) -> float:
-    r"""최소 전단철근량을 반환한다 (KDS 14 20 22 4.3.3).
+    r"""최소 전단철근량을 반환한다.
+
+    **KDS 14 20 22 4.3.3(3), 식 (4.3-1)**
 
     .. math::
         A_{v,min} = \max\left(0.0625\sqrt{f_{ck}},\ 0.35\right)
@@ -206,7 +214,9 @@ def max_stirrup_spacing(
     d: float,
     v_s: float,
 ) -> float:
-    r"""전단철근의 최대 간격을 반환한다 (KDS 14 20 22 4.3.2).
+    r"""전단철근의 최대 간격을 반환한다.
+
+    **KDS 14 20 22 4.3.2(1), (3)**
 
     .. math::
         V_s \le \frac{1}{3}\sqrt{f_{ck}} b_w d \ \Rightarrow\
@@ -336,7 +346,9 @@ def check_shear(
     a_g: float = 0.0,
     alpha: float = 90.0,
 ) -> ShearCheck:
-    r"""전단 설계를 검토한다 (KDS 14 20 22).
+    r"""전단 설계를 검토한다.
+
+    **KDS 14 20 22 4.1 ~ 4.3, KDS 14 20 10 4.3.3(2)③**
 
     다음을 모두 확인한다.
 
@@ -471,7 +483,9 @@ def cracking_torque(
     p_cp: float,
     lambda_c: float = 1.0,
 ) -> float:
-    r"""균열 비틀림모멘트 :math:`T_{cr}` 를 반환한다 (KDS 14 20 22 4.4.1).
+    r"""균열 비틀림모멘트 :math:`T_{cr}` 를 반환한다.
+
+    **KDS 14 20 22 4.4.2**
 
     .. math::
         T_{cr} = \frac{1}{3}\lambda\sqrt{f_{ck}}\, \frac{A_{cp}^2}{p_{cp}}
@@ -495,7 +509,9 @@ def torsion_negligible(
     p_cp: float,
     lambda_c: float = 1.0,
 ) -> bool:
-    r"""비틀림을 무시할 수 있는지 판정한다 (KDS 14 20 22 4.4.1).
+    r"""비틀림을 무시할 수 있는지 판정한다.
+
+    **KDS 14 20 22 4.4.1(1)①**
 
     .. math::
         T_u < \phi \frac{1}{12}\lambda\sqrt{f_{ck}}\,\frac{A_{cp}^2}{p_{cp}}
@@ -561,7 +577,9 @@ def longitudinal_torsion_reinforcement(
     fy: float,
     theta: float = 45.0,
 ) -> float:
-    r"""비틀림에 필요한 종방향 철근량 :math:`A_l` 을 반환한다 (KDS 14 20 22 4.4.1).
+    r"""비틀림에 필요한 종방향 철근량 :math:`A_l` 을 반환한다.
+
+    **KDS 14 20 22 4.5**
 
     .. math::
         A_l = \frac{A_t}{s} p_h \frac{f_{yt}}{f_y} \cot^2\theta
@@ -599,7 +617,9 @@ def check_torsion_section(
     p_h: float,
     v_c: float | None = None,
 ) -> tuple[float, float, bool]:
-    r"""전단과 비틀림을 함께 받는 단면의 크기를 검토한다 (KDS 14 20 22 4.4.2).
+    r"""전단과 비틀림을 함께 받는 단면의 크기를 검토한다.
+
+    **KDS 14 20 22 4.5**
 
     .. math::
         \sqrt{\left(\frac{V_u}{b_w d}\right)^2

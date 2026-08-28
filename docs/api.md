@@ -24,6 +24,32 @@ from concreteproperties_kds import shear                     # 모듈 객체
 | `psc` | KDS 14 20 60 — 프리스트레스트 |
 | `biaxial` | 2축 휨 간략식 |
 
+## 자동 생성 API 문서
+
+각 모듈의 모든 함수·클래스·상수의 docstring 을 그대로 옮긴 참조 문서이다.
+설계식에는 KDS 조문과 식 번호가 표기되어 있다.
+
+```{eval-rst}
+.. autosummary::
+    :toctree: gen
+    :caption: API 참조
+    :template: custom-module-template.rst
+    :recursive:
+
+    concreteproperties_kds.kds
+    concreteproperties_kds.loads
+    concreteproperties_kds.shear
+    concreteproperties_kds.serviceability
+    concreteproperties_kds.durability
+    concreteproperties_kds.detailing
+    concreteproperties_kds.slender
+    concreteproperties_kds.psc
+    concreteproperties_kds.biaxial
+```
+
+아래는 손으로 정리한 요약이다. 설계식과 조문의 대응만 보려면
+[설계식 목록](user_guide/design_codes/equations.md)이 더 편하다.
+
 ---
 
 ## `kds` — 휨 및 압축 (KDS 14 20 10, KDS 14 20 20)

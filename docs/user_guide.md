@@ -5,13 +5,17 @@
 
 ## 목차
 
-1. [재료](user_guide/materials.md) — 콘크리트·철근 재료와 응력-변형률 관계
-2. [형상](user_guide/geometry.md) — 단면 형상 정의와 축 규약
-3. [해석](user_guide/analysis.md) — 총단면·균열단면·극한단면 해석
-4. [프리스트레스트 해석](user_guide/prestressed_analysis.md) — PSC 단면
-5. [결과](user_guide/results.md) — 결과 객체와 후처리
-6. [설계기준](user_guide/design_codes.md) — 설계기준 모듈
-7. [가정](user_guide/assumptions.md) — 해석 가정과 부호 규약
+```{toctree}
+:maxdepth: 1
+
+user_guide/materials
+user_guide/geometry
+user_guide/analysis
+user_guide/prestressed_analysis
+user_guide/results
+user_guide/design_codes
+user_guide/assumptions
+```
 
 KDS 모듈별 상세 문서는 [설계기준](user_guide/design_codes.md#kds-14-20-모듈-구성)
 에서 찾을 수 있다.

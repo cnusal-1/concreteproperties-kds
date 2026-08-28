@@ -5,17 +5,34 @@
 
 모듈 구성
 ---------
-============================= ==================================================
-:mod:`~concreteproperties_kds.kds`             휨 및 압축 (KDS 14 20 20, 14 20 10)
-:mod:`~concreteproperties_kds.loads`           하중조합 (KDS 14 20 01)
-:mod:`~concreteproperties_kds.shear`           전단 및 비틀림 (KDS 14 20 22)
-:mod:`~concreteproperties_kds.serviceability`  사용성 (KDS 14 20 30)
-:mod:`~concreteproperties_kds.durability`      내구성 (KDS 14 20 40)
-:mod:`~concreteproperties_kds.detailing`       철근상세·정착·이음 (KDS 14 20 50, 52)
-:mod:`~concreteproperties_kds.slender`         세장 기둥 (KDS 14 20 20 4.4)
-:mod:`~concreteproperties_kds.psc`             프리스트레스트 (KDS 14 20 60)
-:mod:`~concreteproperties_kds.biaxial`         2축 휨 간략식
-============================= ==================================================
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 모듈
+     - 대상 기준
+   * - :mod:`~concreteproperties_kds.kds`
+     - 휨 및 압축 (KDS 14 20 10, KDS 14 20 20)
+   * - :mod:`~concreteproperties_kds.loads`
+     - 하중조합 (KDS 14 20 10 4.2.2)
+   * - :mod:`~concreteproperties_kds.shear`
+     - 전단 및 비틀림 (KDS 14 20 22)
+   * - :mod:`~concreteproperties_kds.serviceability`
+     - 사용성 (KDS 14 20 30)
+   * - :mod:`~concreteproperties_kds.durability`
+     - 내구성 (KDS 14 20 40)
+   * - :mod:`~concreteproperties_kds.detailing`
+     - 철근상세·정착·이음 (KDS 14 20 50, KDS 14 20 52)
+   * - :mod:`~concreteproperties_kds.slender`
+     - 세장 기둥 (KDS 14 20 20 4.4)
+   * - :mod:`~concreteproperties_kds.psc`
+     - 프리스트레스트 (KDS 14 20 60)
+   * - :mod:`~concreteproperties_kds.biaxial`
+     - 2축 휨 간략식 (문헌)
+
+설계식에는 KDS 조문과 식 번호를 표기하였다. 전체 목록은 문서의
+"설계식 목록" 을 참고한다.
 """
 
 from concreteproperties_kds import (

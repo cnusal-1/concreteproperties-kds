@@ -21,7 +21,9 @@ def radius_of_gyration(
     i_g: float | None = None,
     a_g: float | None = None,
 ) -> float:
-    r"""단면의 회전반지름을 반환한다 (KDS 14 20 20 4.4.1).
+    r"""단면의 회전반지름을 반환한다.
+
+    **KDS 14 20 20 4.4.1**
 
     - 직사각형 단면 : :math:`r = 0.3h`
     - 원형 단면 : :math:`r = 0.25D`
@@ -85,7 +87,9 @@ def slenderness_limit(
     m1: float = 0.0,
     m2: float = 1.0,
 ) -> float:
-    r"""세장효과를 무시할 수 있는 세장비 한계를 반환한다 (KDS 14 20 20 4.4.1).
+    r"""세장효과를 무시할 수 있는 세장비 한계를 반환한다.
+
+    **KDS 14 20 20 4.4.1**
 
     - 횡구속 골조 :
       :math:`\dfrac{k l_u}{r} \le 34 - 12\left(\dfrac{M_1}{M_2}\right) \le 40`
@@ -117,7 +121,9 @@ def flexural_stiffness(
     e_s: float | None = None,
     i_se: float | None = None,
 ) -> float:
-    r"""좌굴하중 계산에 사용할 휨강성 :math:`EI` 를 반환한다 (KDS 14 20 20 4.4).
+    r"""좌굴하중 계산에 사용할 휨강성 :math:`EI` 를 반환한다.
+
+    **KDS 14 20 20 4.4.2**
 
     철근 배치를 알면 정밀식
 
@@ -149,7 +155,9 @@ def flexural_stiffness(
 
 
 def critical_buckling_load(ei: float, k: float, l_u: float) -> float:
-    r"""임계좌굴하중 :math:`P_c` 를 반환한다 (KDS 14 20 20 4.4).
+    r"""임계좌굴하중 :math:`P_c` 를 반환한다.
+
+    **KDS 14 20 20 4.4.2**
 
     .. math::
         P_c = \frac{\pi^2 EI}{(k l_u)^2}
@@ -179,7 +187,9 @@ def moment_magnifier_braced(
     m2: float = 1.0,
     transverse_load: bool = False,
 ) -> tuple[float, float]:
-    r"""횡구속 골조의 모멘트확대계수를 반환한다 (KDS 14 20 20 4.4.2).
+    r"""횡구속 골조의 모멘트확대계수를 반환한다.
+
+    **KDS 14 20 20 4.4.2**
 
     .. math::
         \delta_{ns} = \frac{C_m}{1 - \dfrac{P_u}{0.75 P_c}} \ge 1.0
@@ -224,7 +234,9 @@ def moment_magnifier_braced(
 
 
 def minimum_moment(p_u: float, h: float) -> float:
-    r"""최소 편심에 의한 모멘트를 반환한다 (KDS 14 20 20 4.4.2).
+    r"""최소 편심에 의한 모멘트를 반환한다.
+
+    **KDS 14 20 20 4.4.2**
 
     .. math::
         M_{2,min} = P_u (15 + 0.03h) \quad (h\ \text{단위: mm})
@@ -312,7 +324,9 @@ def check_slenderness(
     transverse_load: bool = False,
     section: str = "rectangular",
 ) -> SlendernessCheck:
-    r"""세장 기둥을 검토하고 확대된 설계 모멘트를 반환한다 (KDS 14 20 20 4.4).
+    r"""세장 기둥을 검토하고 확대된 설계 모멘트를 반환한다.
+
+    **KDS 14 20 20 4.4**
 
     Args:
         p_u: 계수 축력 (N)
