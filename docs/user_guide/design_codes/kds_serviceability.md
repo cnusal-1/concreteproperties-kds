@@ -111,16 +111,26 @@ $$\Delta = k\frac{w l^4}{E_c I_e}, \qquad w = \frac{8M}{l^2}$$
 | 양단 연속 | $l/21$ | $l/28$ |
 | 캔틸레버 | $l/8$ | $l/10$ |
 
-$f_y \ne 400$ MPa 이면 $(0.43 + f_y/700)$ 을 곱한다.
+표의 값은 보통중량콘크리트($m_c = 2300$ kg/m³)와 $f_y = 400$ MPa 철근 기준이며,
+다른 조건에는 다음 보정을 적용한다 (KDS 14 20 30 표 4.2-1 주).
+
+- 단위질량 1,500~2,000 kg/m³ 의 구조용 경량콘크리트 :
+  $(1.65 - 0.00031 m_c) \ge 1.09$ 를 곱한다.
+- $f_y \ne 400$ MPa : $(0.43 + f_y/700)$ 을 곱한다.
 
 ```python
 from concreteproperties_kds.serviceability import minimum_thickness
 
 minimum_thickness(span=8000, member="보", support="단순지지")            # 500.0 mm
 minimum_thickness(span=8000, member="보", support="단순지지", fy=500)    # 572.1 mm
+minimum_thickness(span=8000, member="보", support="단순지지", m_c=1800)  # 546.0 mm
 ```
 
-## 균열 제어
+## 균열 제어 (KDS 14 20 20 4.2.3(4))
+
+KDS 14 20 30 4.1(1) 은 균열 검토를 KDS 14 20 20(4.2.3) 으로 위임한다.
+콘크리트 인장연단에 가장 가까이 배치되는 철근의 중심 간격 $s$ 는 다음 두 식으로
+계산한 값 중 **작은 값 이하**여야 한다 (식 4.2-3, 4.2-4).
 
 $$s = 375\left(\frac{\kappa_{cr}}{f_s}\right) - 2.5 c_c
 \le 300\left(\frac{\kappa_{cr}}{f_s}\right)$$
@@ -135,19 +145,28 @@ fs, s_max, ok = check_crack_control(bar_spacing=100, fy=400, c_c=40)
 # (266.7, 293.75, True)
 ```
 
-## 수축·온도철근
+## 수축·온도철근 (KDS 14 20 50 4.6.2)
 
-1방향 슬래브의 수축·온도철근비는 다음 값 이상이어야 한다.
+1방향 철근콘크리트 슬래브의 수축·온도철근비는 다음 값 이상이어야 하나, 어떤
+경우에도 0.0014 이상이어야 한다.
 
 $$\rho = \begin{cases}
 0.0020 & f_y \le 400\ \text{MPa} \\
-\max\left(0.0020 \times \dfrac{400}{f_y},\ 0.0014\right) & f_y > 400\ \text{MPa}
+0.0020 \times \dfrac{400}{f_y} & f_y > 400\ \text{MPa}
 \end{cases}$$
 
-```python
-from concreteproperties_kds.serviceability import shrinkage_temperature_reinforcement
+다만 단위 폭 1 m 당 1,800 mm² 보다 크게 취할 필요는 없고, 간격은 슬래브 두께의
+5배 이하이면서 450 mm 이하여야 한다.
 
-shrinkage_temperature_reinforcement(fy=400, a_g=1000 * 200)   # 400.0 mm^2/m
+```python
+from concreteproperties_kds.serviceability import (
+    shrinkage_temperature_reinforcement,
+    shrinkage_temperature_spacing,
+)
+
+shrinkage_temperature_reinforcement(fy=400, a_g=1000 * 200)    #  400.0 mm^2/m
+shrinkage_temperature_reinforcement(fy=400, a_g=1000 * 1000)   # 1800.0 (상한)
+shrinkage_temperature_spacing(thickness=200)                   #  450.0 mm
 ```
 
 ## API
@@ -158,11 +177,12 @@ shrinkage_temperature_reinforcement(fy=400, a_g=1000 * 200)   # 400.0 mm^2/m
 | `cracking_moment(fck, i_g, y_t, lambda_c)` | $M_{cr}$ |
 | `long_term_deflection_factor(rho_prime, duration)` | $\lambda_\Delta$ |
 | `total_deflection(...)` | 장기 추가처짐과 전체 처짐 |
-| `minimum_thickness(span, member, support, fy)` | 최소 두께 |
+| `minimum_thickness(span, member, support, fy, m_c)` | 최소 두께 |
 | `deflection_limit(span, condition)` | 허용처짐 |
 | `deflection_target(condition)` | 비교 대상 처짐 (`"live"` / `"attached"`) |
 | `check_deflection(...)` | 처짐 종합 검토 → `DeflectionCheck` |
 | `max_bar_spacing(fs, c_c, dry_environment)` | 균열 제어 최대 간격 |
 | `service_steel_stress(fy)` | $f_s = \frac{2}{3} f_y$ |
 | `check_crack_control(...)` | 균열 제어 검토 |
-| `shrinkage_temperature_reinforcement(fy, a_g)` | 수축·온도철근량 |
+| `shrinkage_temperature_reinforcement(fy, a_g, width)` | 수축·온도철근량 (1,800 mm²/m 상한) |
+| `shrinkage_temperature_spacing(thickness)` | 수축·온도철근 최대 간격 |

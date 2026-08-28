@@ -71,7 +71,9 @@ from concreteproperties_kds.kds import (
 from concreteproperties_kds.loads import (
     LOAD_COMBINATIONS,
     LoadCombination,
+    alpha_h,
     evaluate_all,
+    minimum_strength,
     print_combinations,
     required_strength,
 )
@@ -151,6 +153,7 @@ __all__ = [
     "allowable_concrete_stress_service",
     "allowable_concrete_stress_transfer",
     "allowable_tendon_stress",
+    "alpha_h",
     "anchorage_set_loss",
     "bar_area",
     "bar_diameter",
@@ -202,6 +205,7 @@ __all__ = [
     "minimum_moment",
     "minimum_net_tensile_strain",
     "minimum_shear_reinforcement",
+    "minimum_strength",
     "minimum_thickness",
     "modulus_of_rupture",
     "moment_magnifier_braced",

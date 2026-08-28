@@ -15,7 +15,7 @@ from concreteproperties_kds import shear                     # 모듈 객체
 | 모듈 | 대상 기준 |
 |---|---|
 | `kds` | KDS 14 20 10, 14 20 20 — 휨 및 압축 |
-| `loads` | KDS 14 20 01 — 하중조합 |
+| `loads` | KDS 14 20 10 4.2.2 — 하중조합 |
 | `shear` | KDS 14 20 22 — 전단 및 비틀림 |
 | `serviceability` | KDS 14 20 30 — 사용성 |
 | `durability` | KDS 14 20 40 — 내구성 |
@@ -68,6 +68,7 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 | `capacity_reduction_factor(eps_t)` | `float` — 강도감소계수 $\phi$ |
 | `section_classification(eps_t)` | `str` — `"압축지배단면"` / `"변화구간단면"` / `"인장지배단면"` |
 | `check_flexural_ductility(theta=0, n_design=0)` | `(eps_t, eps_t_min, ok)` |
+| `check_minimum_flexural_reinforcement(theta=0, m_u=None)` | `(phi_m_n, m_cr, m_required, ok)` |
 | `ultimate_bending_capacity(theta=0, n_design=0)` | `(설계강도, 공칭강도, phi)` |
 | `moment_interaction_diagram(theta=0, limits=None, control_points=None, labels=None, n_points=24, n_spacing=None, progress_bar=True)` | `(설계 상관도, 공칭 상관도, phi 목록)` |
 | `biaxial_bending_diagram(n_design=0, n_points=48, progress_bar=True)` | `(설계 상관도, phi 목록)` |
@@ -90,7 +91,8 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 | `compression_controlled_strain_limit(fy)` | $\varepsilon_y$ | KDS 14 20 20 4.1.2 |
 | `tension_controlled_strain_limit(fy)` | $\varepsilon_{t,tl}$ | KDS 14 20 20 4.1.2 |
 | `minimum_net_tensile_strain(fy)` | $\varepsilon_{t,min}$ | KDS 14 20 20 4.1.2 |
-| `minimum_flexural_reinforcement(fck, fy, b_w, d)` | $A_{s,min}$ (mm²) | KDS 14 20 20 4.2.2 |
+| `minimum_flexural_moment(m_cr)` | $1.2 M_{cr}$ | KDS 14 20 20 4.2.2 |
+| `minimum_flexural_moment_alternative(m_u)` | $\frac{4}{3} M_u$ | KDS 14 20 20 4.2.2(2) |
 
 ### 모듈 상수
 
@@ -110,17 +112,19 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 
 ---
 
-## `loads` — 하중조합 (KDS 14 20 01)
+## `loads` — 하중조합 (KDS 14 20 10 4.2.2)
 
 | 이름 | 내용 |
 |---|---|
-| `LoadCombination(name, factors, description)` | 하중조합. `evaluate(loads)` |
-| `LOAD_COMBINATIONS` | U1~U8 |
-| `LOAD_SYMBOLS`, `ROOF_LOADS` | 하중 기호 |
-| `required_strength(loads, combinations, reduce_live_load)` | `(최대 U, 지배 조합)` |
+| `LoadCombination(name, equation, factors, roof, alpha_h_symbols, live_load_reducible, description)` | 하중조합. `evaluate(loads, depth, reduce_live_load)` |
+| `LOAD_COMBINATIONS` | 식 (4.2-1)~(4.2-8) 을 전개한 12개 |
+| `alpha_h(depth)` | 연직토압 보정계수 |
+| `required_strength(loads, combinations, depth, reduce_live_load)` | `(최대 U, 지배 조합)` |
+| `minimum_strength(loads, ...)` | `(최소 U, 해당 조합)` — 부양·전도 검토 |
 | `evaluate_all(loads, ...)` | 모든 조합 결과 (큰 순서) |
 | `print_combinations(loads, ...)` | 표 출력 |
-| `LIVE_LOAD_FACTOR_REDUCED` | 0.5 |
+| `LOAD_SYMBOLS`, `ROOF_LOADS` | 하중 기호 |
+| `LIVE_LOAD_REDUCTION_THRESHOLD`, `LIVE_LOAD_FACTOR_REDUCED` | 5.0 kN/m², 0.5 |
 
 ## `shear` — 전단 및 비틀림 (KDS 14 20 22)
 
@@ -148,26 +152,27 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 | `cracking_moment(fck, i_g, y_t, lambda_c)` | $M_{cr}$ |
 | `long_term_deflection_factor(rho_prime, duration)` | $\lambda_\Delta$ |
 | `total_deflection(...)` | `(장기 추가처짐, 전체 처짐)` |
-| `minimum_thickness(span, member, support, fy)` | 최소 두께 |
+| `minimum_thickness(span, member, support, fy, m_c)` | 최소 두께 |
 | `deflection_limit(span, condition)` | 허용처짐 |
 | `deflection_target(condition)` | `"live"` / `"attached"` |
 | `check_deflection(...)` → `DeflectionCheck` | 처짐 종합 검토 |
 | `max_bar_spacing(fs, c_c, dry_environment)` | 균열 제어 최대 간격 |
 | `service_steel_stress(fy)` | $f_s = \frac{2}{3}f_y$ |
 | `check_crack_control(...)` | `(fs, s_max, ok)` |
-| `shrinkage_temperature_reinforcement(fy, a_g)` | 수축·온도철근량 |
+| `shrinkage_temperature_reinforcement(fy, a_g, width)` | 수축·온도철근량 |
+| `shrinkage_temperature_spacing(thickness)` | 수축·온도철근 최대 간격 |
 | `CREEP_FACTOR`, `MINIMUM_THICKNESS_RATIO`, `DEFLECTION_LIMIT`, `KAPPA_CR_DRY`, `KAPPA_CR_OTHER` | 편집 가능한 표·상수 |
 
 ## `durability` — 내구성 (KDS 14 20 40)
 
 | 이름 | 내용 |
 |---|---|
-| `ExposureClass` | 노출등급 하나의 요구사항 |
+| `ExposureClass` | 노출등급 하나의 요구사항 (`fck_min`, `cover_required`) |
 | `EXPOSURE_REQUIREMENTS` | 등급 16종의 표 |
-| `check_durability(exposure_class, fck, water_binder_ratio, cover)` → `DurabilityCheck` | 검토 |
-| `governing_requirements(exposure_classes)` | `(fck_min, wb_max, cover_min)` |
+| `check_durability(exposure_class, fck, cover, cover_min, water_binder_ratio)` → `DurabilityCheck` | 검토 |
+| `governing_requirements(exposure_classes)` | 지배 최소 설계기준압축강도 (MPa) |
 | `print_exposure_table()` | 등급표 출력 |
-| `MAX_CHLORIDE_ION` | 최대 염화물 이온량 |
+| `MAX_CHLORIDE_ION` | 참고용 최대 염화물 이온량 (KDS 규정 아님) |
 
 ## `detailing` — 철근상세·정착·이음 (KDS 14 20 50, 52)
 
@@ -183,7 +188,7 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 | `lap_splice_tension(l_d, splice_class)` | 인장 겹침이음 |
 | `lap_splice_compression(bar, fy, fck, l_dc)` | 압축 겹침이음 |
 | `summarise_detailing(...)` → `DetailingSummary` | 위 값을 한 번에 |
-| `BAR_PROPERTIES`, `MINIMUM_COVER`, `DEVELOPMENT_SIMPLE_FACTOR` | 편집 가능한 표 |
+| `BAR_PROPERTIES`, `MINIMUM_COVER`, `LDB_FACTOR`, `DEVELOPMENT_TABLE_FACTOR`, `COVER_REDUCTION_CONDITIONS` | 편집 가능한 표·상수 |
 | `LD_MIN`, `LDC_MIN`, `LDH_MIN`, `LAP_MIN` | 300, 200, 150, 300 mm |
 
 ## `slender` — 세장 기둥 (KDS 14 20 20 4.4)
@@ -204,8 +209,8 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 
 | 이름 | 내용 |
 |---|---|
-| `allowable_tendon_stress(fpu, fpy, stage)` | 긴장재 허용응력 |
-| `allowable_concrete_stress_transfer(fci, simply_supported_end)` | 도입 직후 허용응력 |
+| `allowable_tendon_stress(fpu, fpy, stage)` | 긴장재 허용응력 (`"jacking"` / `"anchorage"` / `"anchorage_device"`) |
+| `allowable_concrete_stress_transfer(fci, simply_supported_end, reinforced_zone)` | 도입 직후 허용응력 |
 | `allowable_concrete_stress_service(fck, sustained, crack_class)` | 사용하중 허용응력 |
 | `friction_loss(...)` | `(p_px, loss)` |
 | `anchorage_set_loss(slip, e_p, length)` | 정착장치 활동 손실 |
@@ -242,4 +247,4 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 | 계수 축력이 설계 인장강도 초과 | `AnalysisError` |
 | 전단철근으로도 요구 강도를 만족 못함 | `ValueError` |
 | $P_u \ge 0.75 P_c$ (좌굴) | `ValueError` |
-| 정의되지 않은 노출등급·철근 호칭·재하기간·지지조건 | `ValueError` |
+| 정의되지 않은 노출등급·철근 호칭·재하기간·지지조건·긴장 단계 | `ValueError` |
