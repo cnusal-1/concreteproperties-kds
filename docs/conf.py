@@ -82,11 +82,9 @@ html_static_path = ["_static"]
 html_title = "concreteproperties KDS 한글판"
 html_theme_options = {
     "sidebar_hide_name": False,
-    "source_repository": (
-        "https://github.com/cnusal-1/wkclauderepositoty"
-    ),
-    "source_branch": "claude/kds-korean-version-hhoavw",
-    "source_directory": "concreteproperties-kds/docs/",
+    "source_repository": "https://github.com/cnusal-1/concreteproperties-kds",
+    "source_branch": "main",
+    "source_directory": "docs/",
 }
 pygments_style = "sphinx"
 pygments_dark_style = "monokai"

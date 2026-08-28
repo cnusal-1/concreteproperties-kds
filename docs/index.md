@@ -61,9 +61,8 @@ contributing
 pip install concreteproperties
 ```
 
-KDS 모듈은 이 저장소의 `concreteproperties-kds/src` 를 `PYTHONPATH` 에 추가하거나,
-해당 디렉터리에서 `pip install -e .` 로 설치한다. 자세한 내용은
-[설치](installation.md) 를 참고한다.
+KDS 모듈은 이 저장소를 내려받아 `pip install -e .` 로 설치하거나, `src` 를
+`PYTHONPATH` 에 추가해 쓴다. 자세한 내용은 [설치](installation.md) 를 참고한다.
 
 ## 빠른 시작
 

@@ -29,14 +29,13 @@ pip install concreteproperties
 이 저장소의 `concreteproperties-kds` 디렉터리에서 다음과 같이 설치한다.
 
 ```shell
-cd concreteproperties-kds
 pip install -e .
 ```
 
 설치하지 않고 `PYTHONPATH` 로 바로 쓸 수도 있다.
 
 ```shell
-export PYTHONPATH=/경로/concreteproperties-kds/src:$PYTHONPATH
+export PYTHONPATH=/내려받은/경로/src:$PYTHONPATH
 python -c "from concreteproperties_kds import KDS; print(KDS)"
 ```
 

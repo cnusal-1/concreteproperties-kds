@@ -6,12 +6,12 @@ build:
     python: "3.12"
 
 sphinx:
-  configuration: concreteproperties-kds/docs/conf.py
+  configuration: docs/conf.py
   fail_on_warning: false
 
 python:
   install:
     - method: pip
-      path: concreteproperties-kds
+      path: .
       extra_requirements:
         - docs

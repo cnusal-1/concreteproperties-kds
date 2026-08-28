@@ -41,7 +41,7 @@ python build_notebooks.py --run
 주면 그림도 함께 그린다.
 
 ```shell
-cd concreteproperties-kds/examples
+cd examples
 PYTHONPATH=../src:. python 04_휨강도.py
 PYTHONPATH=../src:. python 04_휨강도.py --plot
 ```

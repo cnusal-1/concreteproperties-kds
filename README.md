@@ -4,10 +4,12 @@
 는 임의 형상의 철근콘크리트 단면 성능을 계산하는 파이썬 패키지이다. 총단면·균열단면·
 극한단면 성능, 모멘트-곡률 해석, P-M 상관도와 2축 휨 상관도, 단면 응력 분포를 다룬다.
 
-이 디렉터리는 원 패키지의 문서를 한글로 옮기고, 국가건설기준
+이 저장소는 원 패키지의 문서를 한글로 옮기고, 국가건설기준
 **KDS 14 20 (콘크리트구조 설계기준)** 을 적용하는 설계기준 모듈을 추가한 것이다.
 단면 해석에서 그치지 않고 **하중조합부터 전단·사용성·내구성·철근상세까지**
 KDS 의 주요 검토를 함께 제공한다.
+
+문서 사이트: <https://cnusal-1.github.io/concreteproperties-kds/>
 
 ## 구성
 
@@ -32,13 +34,13 @@ concreteproperties-kds/
 
 ```shell
 pip install concreteproperties
-cd concreteproperties-kds && pip install -e .
+pip install -e .
 ```
 
 또는 설치 없이:
 
 ```shell
-export PYTHONPATH=$PWD/concreteproperties-kds/src:$PYTHONPATH
+export PYTHONPATH=$PWD/src:$PYTHONPATH
 ```
 
 ## 사용 예 — 단면 해석
