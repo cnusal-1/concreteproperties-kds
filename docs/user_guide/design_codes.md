@@ -20,17 +20,21 @@ KDS 는 단면 해석뿐 아니라 하중조합·전단·사용성·내구성·�
 `kds` 모듈이 단면 해석의 중심이고, 나머지는 단면 요소망과 무관한 순수 함수
 모듈이다.
 
-| 모듈 | 대상 기준 | 문서 |
-|---|---|---|
-| `kds` | KDS 14 20 10, 14 20 20 (휨 및 압축) | [휨 및 압축](design_codes/kds.md) |
-| `loads` | KDS 14 20 10 4.2.2 (하중조합) | [하중조합](design_codes/kds_loads.md) |
-| `shear` | KDS 14 20 22 (전단 및 비틀림) | [전단 및 비틀림](design_codes/kds_shear.md) |
-| `serviceability` | KDS 14 20 30 (사용성) | [사용성](design_codes/kds_serviceability.md) |
-| `durability` | KDS 14 20 40 (내구성) | [내구성](design_codes/kds_durability.md) |
-| `detailing` | KDS 14 20 50, 52 (철근상세·정착·이음) | [철근상세·정착·이음](design_codes/kds_detailing.md) |
-| `slender` | KDS 14 20 20 4.4 (세장 기둥) | [세장 기둥](design_codes/kds_slender.md) |
-| `psc` | KDS 14 20 60 (프리스트레스트) | [프리스트레스트](design_codes/kds_psc.md) |
-| `biaxial` | (문헌 — 2축 휨 간략식) | [2축 휨 간략식](design_codes/kds_biaxial.md) |
+| 모듈 | 대상 기준 | 무엇을 구하는가 | 문서 |
+|---|---|---|---|
+| `kds` | 14 20 10, 14 20 20 | 재료, 설계 휨강도 $\phi M_n$, 강도감소계수 $\phi$, P-M 상관도, 최대 축강도, 연성·최소철근량 | [휨 및 압축](design_codes/kds.md) |
+| `loads` | 14 20 10 4.2.2 | 하중조합 12개를 모두 평가해 소요강도 $U$ 와 지배 조합 | [하중조합](design_codes/kds_loads.md) |
+| `shear` | 14 20 22 | $V_c$, $V_s$, 최소 전단철근량, 스터럽 간격, 비틀림 $T_n$ | [전단 및 비틀림](design_codes/kds_shear.md) |
+| `serviceability` | 14 20 30 | 유효단면2차모멘트, 장기처짐, 최소 두께, 허용처짐, 균열 제어 철근 간격 | [사용성](design_codes/kds_serviceability.md) |
+| `durability` | 14 20 40 | 노출등급별 최소 설계기준압축강도와 피복두께 | [내구성](design_codes/kds_durability.md) |
+| `detailing` | 14 20 50, 52 | 최소 피복·순간격, 정착길이, 표준갈고리, 겹침이음 | [철근상세·정착·이음](design_codes/kds_detailing.md) |
+| `slender` | 14 20 20 4.4 | 세장비, 임계좌굴하중 $P_c$, 모멘트확대계수 $\delta_{ns}$ | [세장 기둥](design_codes/kds_slender.md) |
+| `psc` | 14 20 60 | 긴장재 허용응력, 프리스트레스 손실, $f_{ps}$, PSC 단면의 $\phi M_n$ | [프리스트레스트](design_codes/kds_psc.md) |
+| `biaxial` | (문헌) | 등하중선법·Bresler 역하중법으로 2축 휨 약산 | [2축 휨 간략식](design_codes/kds_biaxial.md) |
+
+각 코드가 무엇을 정하는 기준인지는
+[KDS 14 20 계열이란](../index.md#kds-14-20-계열이란) 을, 설계식과 조문의 1:1
+대응은 [설계식 목록](design_codes/equations.md) 을 참고한다.
 
 전체 설계 흐름을 하나로 엮은 예제는
 [`examples/17_종합설계.py`](../../examples/17_종합설계.py) 를 참고한다.
