@@ -35,13 +35,23 @@ def md(text: str) -> nbformat.NotebookNode:
 def code(text: str) -> nbformat.NotebookNode:
     """코드 셀을 만든다.
 
+    ``plt.subplots`` 로 그림을 만드는 셀에는 ``plt.show()`` 를 덧붙인다.
+    객체지향 API(``ax.plot`` 등)만 쓰면 ``draw_if_interactive`` 가 호출되지
+    않아 inline 백엔드가 셀 끝에서 그림을 내보내지 않고, 노트북을 실행해도
+    그림 출력이 비어 버린다.
+
     Args:
         text: 셀 내용
 
     Returns:
         코드 셀
     """
-    return nbformat.v4.new_code_cell(dedent(text).strip("\n"))
+    src = dedent(text).strip("\n")
+
+    if "plt.subplots(" in src and "plt.show()" not in src:
+        src += "\nplt.show()"
+
+    return nbformat.v4.new_code_cell(src)
 
 
 def write(name: str, cells: list[nbformat.NotebookNode]) -> Path:

@@ -13,6 +13,8 @@ from nbbuild import code, execute, md, write
 
 # 모든 노트북 앞머리에 붙는 준비 코드
 SETUP = """
+%matplotlib inline
+
 import matplotlib.pyplot as plt
 import numpy as np
 

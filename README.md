@@ -170,7 +170,27 @@ PYTHONPATH=../src:. python 05_PM상관도.py --plot
 
 ## 문서
 
-[`docs/index.md`](docs/index.md) 에서 시작한다.
+원 문서 사이트와 같은 형태의 정적 사이트로 빌드된다. `main` 에 반영되면
+`.github/workflows/docs.yml` 이 빌드해 GitHub Pages 로 배포한다.
+
+직접 빌드하려면:
+
+```shell
+pip install -e ".[docs]"
+sphinx-build -b html docs docs/_build/html
+# docs/_build/html/index.html 을 브라우저로 연다
+```
+
+노트북 예제는 실행 결과까지 저장해 두고 `conf.py` 의
+`nb_execution_mode = "off"` 로 그대로 쓰므로, 문서 빌드에는 노트북 실행이
+필요 없다. 노트북을 고칠 때는 `.ipynb` 를 직접 고치지 말고
+`scripts/build_notebooks.py` 를 고친 뒤 다시 생성한다.
+
+```shell
+python scripts/build_notebooks.py --run
+```
+
+내용만 읽으려면 [`docs/index.md`](docs/index.md) 에서 시작한다.
 
 | 문서 | 내용 |
 |---|---|
