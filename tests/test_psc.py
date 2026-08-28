@@ -1,4 +1,4 @@
-"""프리스트레스트 콘크리트 검증 시험 (KDS 14 20 62)."""
+"""프리스트레스트 콘크리트 검증 시험 (KDS 14 20 60)."""
 
 from __future__ import annotations
 
@@ -42,12 +42,17 @@ FPY = 0.9 * FPU  # 저릴랙세이션 강연선
 
 
 def test_allowable_tendon_stress():
-    """긴장재의 허용응력을 확인한다."""
-    assert allowable_tendon_stress(fpu=FPU, fpy=FPY, stage="jacking") == pytest.approx(
-        min(0.80 * FPU, 0.94 * FPY)
-    )
+    """긴장재의 허용응력을 확인한다 (KDS 14 20 60 4.2.2)."""
+    assert allowable_tendon_stress(
+        fpu=FPU, fpy=FPY, stage="jacking"
+    ) == pytest.approx(min(0.80 * FPU, 0.94 * FPY))
+
     assert allowable_tendon_stress(
         fpu=FPU, fpy=FPY, stage="anchorage"
+    ) == pytest.approx(min(0.74 * FPU, 0.82 * FPY))
+
+    assert allowable_tendon_stress(
+        fpu=FPU, fpy=FPY, stage="anchorage_device"
     ) == pytest.approx(0.70 * FPU)
 
     with pytest.raises(ValueError, match="stage"):
@@ -65,6 +70,9 @@ def test_allowable_concrete_transfer():
         fci=30, simply_supported_end=True
     )
     assert f_t_end == pytest.approx(-0.50 * np.sqrt(30))
+
+    f_c_hi, _ = allowable_concrete_stress_transfer(fci=30, reinforced_zone=True)
+    assert f_c_hi == pytest.approx(0.70 * 30)
 
 
 def test_allowable_concrete_service():

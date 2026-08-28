@@ -1,7 +1,7 @@
 """예제 04 - 보의 설계 휨강도.
 
 KDS 14 20 20 의 등가직사각형 응력블록으로 공칭 휨강도를 구하고,
-KDS 14 20 10 표 4.2-1 의 강도감소계수를 적용한 설계 휨강도를 산정한다.
+KDS 14 20 10 4.3.3(2) 의 강도감소계수를 적용한 설계 휨강도를 산정한다.
 아울러 최소철근량과 최소허용변형률 조건을 검토한다.
 
 실행:
@@ -14,7 +14,7 @@ import sys
 
 from examples_common import beam_section
 
-from concreteproperties_kds import minimum_flexural_reinforcement
+from concreteproperties_kds import minimum_flexural_moment
 
 
 def main(plot: bool = False) -> None:
@@ -48,12 +48,16 @@ def main(plot: bool = False) -> None:
     print(f"순인장변형률     et      = {eps_t:.5f}")
     print(f"판정                     = {'만족' if ok else '불만족'}")
 
-    a_s_min = minimum_flexural_reinforcement(fck=27, fy=400, b_w=400, d=550)
-    a_s = 4 * 387.1
     print()
-    print(f"최소철근량       As,min  = {a_s_min:.1f} mm^2  (KDS 14 20 20 4.2.2)")
-    print(f"배근 철근량      As      = {a_s:.1f} mm^2")
-    print(f"판정                     = {'만족' if a_s >= a_s_min else '불만족'}")
+    print("=" * 70)
+    print("최소 철근량 (KDS 14 20 20 4.2.2)")
+    print("=" * 70)
+    phi_m_n, m_cr, m_req, ok_min = kds.check_minimum_flexural_reinforcement()
+    print(f"균열휨모멘트     Mcr     = {m_cr / 1e6:.2f} kN.m")
+    m_req = minimum_flexural_moment(m_cr=m_cr)
+    print(f"요구 설계휨강도  1.2Mcr  = {m_req / 1e6:.2f} kN.m")
+    print(f"설계 휨강도      phi*Mn  = {phi_m_n / 1e6:.2f} kN.m")
+    print(f"판정                     = {'만족' if ok_min else '불만족'}")
 
     if plot:
         kds.calculate_ultimate_stress(ultimate_results=u_res).plot_stress()

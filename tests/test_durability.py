@@ -36,25 +36,42 @@ def test_exposure_classes_defined():
 
 
 def test_requirements_increase_with_severity():
-    """같은 범주 안에서 등급이 높을수록 요구가 엄격해진다."""
+    """같은 범주 안에서 등급이 높을수록 요구 강도가 커진다 (표 4.1-3)."""
     ec = [EXPOSURE_REQUIREMENTS[f"EC{i}"] for i in range(1, 5)]
 
     fck = [r.fck_min for r in ec]
     assert fck == sorted(fck)
+    assert fck == [21.0, 24.0, 27.0, 30.0]
 
-    wb = [r.wb_max for r in ec if r.wb_max is not None]
-    assert wb == sorted(wb, reverse=True)
+
+def test_minimum_strength_table():
+    """표 4.1-3 의 최소 설계기준압축강도를 전부 확인한다."""
+    expected = {
+        "E0": 21.0,
+        "EC1": 21.0, "EC2": 24.0, "EC3": 27.0, "EC4": 30.0,
+        "ES1": 30.0, "ES2": 30.0, "ES3": 35.0, "ES4": 35.0,
+        "EF1": 24.0, "EF2": 27.0, "EF3": 30.0, "EF4": 30.0,
+        "EA1": 27.0, "EA2": 30.0, "EA3": 30.0,
+    }
+
+    for code, fck_min in expected.items():
+        assert EXPOSURE_REQUIREMENTS[code].fck_min == pytest.approx(fck_min), code
+
+
+def test_cover_required_categories():
+    """피복두께 규정은 노출범주 EC·ES 에만 적용된다 (KDS 14 20 40 4.1.4(2))."""
+    for code, req in EXPOSURE_REQUIREMENTS.items():
+        assert req.cover_required == code.startswith(("EC", "ES")), code
 
 
 def test_check_durability_pass():
     """요구를 만족하는 경우를 확인한다."""
     res = check_durability(
-        exposure_class="EC3", fck=30, water_binder_ratio=0.45, cover=40
+        exposure_class="EC3", fck=30, cover=40, cover_min=40
     )
 
     assert res.ok
     assert res.ok_fck
-    assert res.ok_wb
     assert res.ok_cover
 
 
@@ -66,15 +83,25 @@ def test_check_durability_fail_strength():
     assert not res.ok_fck
 
 
-def test_check_durability_fail_wb():
-    """물-결합재비가 크면 불만족으로 판정된다."""
+def test_check_durability_fail_cover():
+    """피복두께가 부족하면 불만족으로 판정된다."""
     res = check_durability(
-        exposure_class="EC4", fck=35, water_binder_ratio=0.55
+        exposure_class="EC4", fck=35, cover=30, cover_min=40
     )
 
     assert res.ok_fck
-    assert not res.ok_wb
+    assert not res.ok_cover
     assert not res.ok
+
+
+def test_water_binder_ratio_is_informational():
+    """물-결합재비는 KCS 에 위임되므로 판정에 쓰이지 않는다."""
+    res = check_durability(
+        exposure_class="EC4", fck=35, water_binder_ratio=0.90
+    )
+
+    assert res.water_binder_ratio == pytest.approx(0.90)
+    assert res.ok
 
 
 def test_check_durability_unchecked_items():
@@ -82,8 +109,8 @@ def test_check_durability_unchecked_items():
     res = check_durability(exposure_class="EC4", fck=35)
 
     assert res.ok
-    assert res.wb is None
     assert res.cover is None
+    assert res.cover_min is None
 
 
 def test_check_durability_invalid():
@@ -93,25 +120,14 @@ def test_check_durability_invalid():
 
 
 def test_governing_requirements():
-    """여러 노출등급이 겹칠 때 가장 엄격한 값이 지배한다."""
-    fck_min, wb_max, cover_min = governing_requirements(
+    """여러 노출등급이 겹칠 때 가장 큰 최소 강도가 지배한다."""
+    assert governing_requirements(
         exposure_classes=["EC3", "EF2", "ES3"]
-    )
+    ) == pytest.approx(35.0)  # ES3
 
-    assert fck_min == pytest.approx(35.0)  # ES3
-    assert wb_max == pytest.approx(0.40)  # ES3
-    assert cover_min == pytest.approx(60.0)  # ES3
-
-
-def test_governing_requirements_no_wb():
-    """물-결합재비 규정이 없는 등급만 있으면 None 을 반환한다."""
-    fck_min, wb_max, cover_min = governing_requirements(
+    assert governing_requirements(
         exposure_classes=["E0", "EC1"]
-    )
-
-    assert fck_min == pytest.approx(21.0)
-    assert wb_max is None
-    assert cover_min == pytest.approx(20.0)
+    ) == pytest.approx(21.0)
 
 
 def test_governing_requirements_invalid():

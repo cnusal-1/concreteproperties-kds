@@ -73,7 +73,7 @@ def main() -> None:
     )
     width = 62
     print("=" * width)
-    print("균열 제어 (KDS 14 20 30 4.3)")
+    print("균열 제어 (KDS 14 20 20 4.2.3)")
     print("=" * width)
     print(f"철근응력         fs = 2/3*fy = {fs:12.1f} MPa")
     print(f"최대 철근 간격   s,max       = {s_max:12.1f} mm")
@@ -84,7 +84,7 @@ def main() -> None:
     print()
     a_st = shrinkage_temperature_reinforcement(fy=FY, a_g=1000.0 * 200.0)
     print(f"수축·온도철근 (t=200 슬래브 1 m 폭) = {a_st:.1f} mm^2/m")
-    print("                  (KDS 14 20 30 4.4)")
+    print("                  (KDS 14 20 50 4.6.2)")
 
 
 if __name__ == "__main__":

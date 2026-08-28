@@ -102,7 +102,7 @@ u_max, governing = required_strength(loads={"D": 25.0, "L": 18.0}, combinations=
 | 함수/클래스 | 내용 |
 |---|---|
 | `LoadCombination(name, factors, description)` | 하중조합 하나. `evaluate(loads)` 로 조합 하중 계산 |
-| `LOAD_COMBINATIONS` | KDS 14 20 01 4.2 의 조합 8개 |
+| `LOAD_COMBINATIONS` | KDS 14 20 10 4.2.2 의 조합 8개 |
 | `required_strength(loads, combinations, reduce_live_load)` | `(최대 U, 지배 조합)` |
 | `evaluate_all(loads, ...)` | 모든 조합의 결과를 큰 순서로 |
 | `print_combinations(loads, ...)` | 결과를 표로 출력 |

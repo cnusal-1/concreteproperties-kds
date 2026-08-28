@@ -20,7 +20,7 @@ from concreteproperties_kds.detailing import (
     summarise_detailing,
 )
 from concreteproperties_kds.durability import check_durability
-from concreteproperties_kds.kds import minimum_flexural_reinforcement
+from concreteproperties_kds.kds import minimum_flexural_moment
 from concreteproperties_kds.loads import print_combinations, required_strength
 from concreteproperties_kds.serviceability import (
     check_crack_control,
@@ -81,8 +81,9 @@ def main() -> None:
     dur = check_durability(
         exposure_class=EXPOSURE,
         fck=FCK,
-        water_binder_ratio=0.48,
         cover=cover_structural,
+        cover_min=cover_structural,
+        water_binder_ratio=0.48,
     )
     dur.print_results()
 
@@ -155,11 +156,14 @@ def main() -> None:
 
     print()
     eps_t, eps_min, ok_duct = kds.check_flexural_ductility()
-    a_s_min = minimum_flexural_reinforcement(fck=FCK, fy=FY, b_w=B, d=d_eff)
     print(f"최소허용변형률     et,min = {eps_min:10.5f}  "
           f"{'만족' if ok_duct else '불만족'}")
-    print(f"최소철근량         As,min = {a_s_min:10.1f} mm^2  "
-          f"{'만족' if a_s >= a_s_min else '불만족'}")
+
+    phi_m_n, m_cr, _, ok_min = kds.check_minimum_flexural_reinforcement()
+    print(f"균열휨모멘트       Mcr    = {m_cr / 1e6:10.2f} kN.m")
+    print(f"요구 강도       1.2*Mcr   = "
+          f"{minimum_flexural_moment(m_cr=m_cr) / 1e6:10.2f} kN.m  "
+          f"{'만족' if ok_min else '불만족'}")
 
     # ------------------------------------------------------------------
     banner("5. 전단 설계 (KDS 14 20 22)")
@@ -222,7 +226,7 @@ def main() -> None:
     items = [
         ("휨강도", f_res.m_x >= m_u),
         ("연성 (최소허용변형률)", ok_duct),
-        ("최소 휨철근량", a_s >= a_s_min),
+        ("최소 철근량 (1.2Mcr)", ok_min),
         ("전단강도", shear.ok),
         ("처짐", defl.ok),
         ("균열 제어", ok_crack),

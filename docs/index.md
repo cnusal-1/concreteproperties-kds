@@ -30,7 +30,7 @@
 | [KDS — 내구성](user_guide/design_codes/kds_durability.md) | KDS 14 20 40 |
 | [KDS — 철근상세·정착·이음](user_guide/design_codes/kds_detailing.md) | KDS 14 20 50, 52 |
 | [KDS — 세장 기둥](user_guide/design_codes/kds_slender.md) | KDS 14 20 20 4.4 |
-| [KDS — 프리스트레스트](user_guide/design_codes/kds_psc.md) | KDS 14 20 62 |
+| [KDS — 프리스트레스트](user_guide/design_codes/kds_psc.md) | KDS 14 20 60 |
 | [KDS — 2축 휨 간략식](user_guide/design_codes/kds_biaxial.md) | Bresler 등 |
 | [가정](user_guide/assumptions.md) | 해석에 사용된 가정과 부호 규약 |
 | [예제](examples.md) | 실행 가능한 예제 17건 |
@@ -94,7 +94,7 @@ KDS 모듈은 다음 9개 모듈로 구성된다.
 | `durability` | KDS 14 20 40 | 노출등급 16종, 최소 강도·물결합재비·피복 |
 | `detailing` | KDS 14 20 50, 52 | 최소 피복·간격, 정착길이, 표준갈고리, 겹침이음 |
 | `slender` | KDS 14 20 20 4.4 | 세장비, 모멘트확대계수, 임계좌굴하중 |
-| `psc` | KDS 14 20 62 | 허용응력, 프리스트레스 손실, $f_{ps}$, PSC 강도감소계수 |
+| `psc` | KDS 14 20 60 | 허용응력, 프리스트레스 손실, $f_{ps}$, PSC 강도감소계수 |
 | `biaxial` | (문헌) | Bresler 등하중선법·역하중법, 엄밀해 비교 |
 
 ## 라이선스

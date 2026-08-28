@@ -1,4 +1,4 @@
-"""프리스트레스트 콘크리트 (KDS 14 20 62).
+"""프리스트레스트 콘크리트 (KDS 14 20 60).
 
 긴장재의 허용응력과 콘크리트의 허용응력, 프리스트레스 손실, 부착·비부착
 긴장재의 극한 응력 :math:`f_{ps}`, 그리고 프리스트레스트 단면에 대한
@@ -25,14 +25,14 @@ if TYPE_CHECKING:
 EPS_Y_PSC = 0.002  # 압축지배변형률한계
 EPS_TL_PSC = 0.005  # 인장지배변형률한계
 
-# 긴장재 응력 계수 gamma_p (KDS 14 20 62 4.1)
+# 긴장재 응력 계수 gamma_p (KDS 14 20 60 4.4.2(3))
 GAMMA_P: dict[str, float] = {
     "일반": 0.55,  # fpy/fpu >= 0.80
     "스트레스릴리브드": 0.40,  # fpy/fpu >= 0.85
     "저릴랙세이션": 0.28,  # fpy/fpu >= 0.90
 }
 
-# 균열등급 (KDS 14 20 62 4.2) - sqrt(fck) 에 곱하는 인장응력 한계 계수
+# 균열등급 (KDS 14 20 60 4.2.1) - sqrt(fck) 에 곱하는 인장응력 한계 계수
 CRACK_CLASS_LIMIT: dict[str, float] = {
     "U": 0.63,  # 비균열등급
     "T": 1.00,  # 부분균열등급
@@ -44,15 +44,18 @@ def allowable_tendon_stress(
     fpy: float,
     stage: str = "jacking",
 ) -> float:
-    r"""긴장재의 허용응력을 반환한다 (KDS 14 20 62 4.2).
+    r"""긴장재의 허용응력을 반환한다 (KDS 14 20 60 4.2.2).
 
-    - 긴장 중 (jacking) : :math:`\min(0.80 f_{pu},\ 0.94 f_{py})`
-    - 정착 직후 (anchorage) : :math:`0.70 f_{pu}`
+    - 긴장 중 (``"jacking"``) : :math:`\min(0.80 f_{pu},\ 0.94 f_{py})`
+    - 정착 직후 (``"anchorage"``) : :math:`\min(0.74 f_{pu},\ 0.82 f_{py})`
+    - 포스트텐션 정착장치·커플러 (``"anchorage_device"``) :
+      :math:`0.70 f_{pu}`
 
     Args:
         fpu: 긴장재의 인장강도 (MPa)
         fpy: 긴장재의 항복강도 (MPa)
-        stage: ``"jacking"`` 또는 ``"anchorage"``. 기본값 ``"jacking"``.
+        stage: ``"jacking"``, ``"anchorage"``, ``"anchorage_device"``.
+            기본값 ``"jacking"``.
 
     Raises:
         ValueError: ``stage`` 가 정의되지 않은 값인 경우
@@ -64,19 +67,27 @@ def allowable_tendon_stress(
         return float(min(0.80 * fpu, 0.94 * fpy))
 
     if stage == "anchorage":
+        return float(min(0.74 * fpu, 0.82 * fpy))
+
+    if stage == "anchorage_device":
         return float(0.70 * fpu)
 
-    msg = 'stage 는 "jacking" 또는 "anchorage" 여야 합니다.'
+    msg = (
+        'stage 는 "jacking", "anchorage", "anchorage_device" 중 '
+        "하나여야 합니다."
+    )
     raise ValueError(msg)
 
 
 def allowable_concrete_stress_transfer(
     fci: float,
     simply_supported_end: bool = False,
+    reinforced_zone: bool = False,
 ) -> tuple[float, float]:
-    r"""프리스트레스 도입 직후 콘크리트의 허용응력을 반환한다 (KDS 14 20 62 4.2).
+    r"""프리스트레스 도입 직후 콘크리트의 허용응력을 반환한다 (KDS 14 20 60 4.2.2).
 
-    - 압축 : :math:`0.60 f_{ci}`
+    - 압축 : :math:`0.60 f_{ci}` (단, 프리텐션 부재의 단부 등 일부 위치는
+      :math:`0.70 f_{ci}`)
     - 인장 : :math:`0.25\sqrt{f_{ci}}` (단순지지 부재의 단부는
       :math:`0.50\sqrt{f_{ci}}`)
 
@@ -84,12 +95,14 @@ def allowable_concrete_stress_transfer(
         fci: 프리스트레스 도입 시 콘크리트의 압축강도 (MPa)
         simply_supported_end: 단순지지 부재의 단부이면 ``True``.
             기본값 ``False``.
+        reinforced_zone: 압축 한계로 :math:`0.70 f_{ci}` 를 적용할 수 있는
+            위치이면 ``True``. 기본값 ``False``.
 
     Returns:
         허용 압축응력과 허용 인장응력 (``f_c_allow``, ``f_t_allow``) (MPa).
         인장은 음(−)의 부호로 반환한다.
     """
-    f_c_allow = 0.60 * fci
+    f_c_allow = (0.70 if reinforced_zone else 0.60) * fci
     coeff = 0.50 if simply_supported_end else 0.25
     f_t_allow = -coeff * np.sqrt(fci)
 
@@ -101,7 +114,7 @@ def allowable_concrete_stress_service(
     sustained: bool = False,
     crack_class: str = "U",
 ) -> tuple[float, float]:
-    r"""사용하중 상태 콘크리트의 허용응력을 반환한다 (KDS 14 20 62 4.2).
+    r"""사용하중 상태 콘크리트의 허용응력을 반환한다 (KDS 14 20 60 4.2).
 
     - 압축 : 지속하중 :math:`0.45 f_{ck}`, 전체하중 :math:`0.60 f_{ck}`
     - 인장 : 비균열등급(U) :math:`0.63\sqrt{f_{ck}}`,
@@ -142,7 +155,7 @@ def friction_loss(
     l_px: float,
     approximate: bool = False,
 ) -> tuple[float, float]:
-    r"""마찰에 의한 프리스트레스 손실을 반환한다 (KDS 14 20 62 4.3).
+    r"""마찰에 의한 프리스트레스 손실을 반환한다 (KDS 14 20 60 4.3).
 
     .. math::
         P_{px} = P_{pj}\, e^{-(\mu_p \alpha_{px} + K l_{px})}
@@ -177,7 +190,7 @@ def anchorage_set_loss(
     e_p: float,
     length: float,
 ) -> float:
-    r"""정착장치 활동에 의한 프리스트레스 손실을 반환한다 (KDS 14 20 62 4.3).
+    r"""정착장치 활동에 의한 프리스트레스 손실을 반환한다 (KDS 14 20 60 4.3).
 
     .. math::
         \Delta f_p = \frac{\Delta l}{l} E_p
@@ -207,7 +220,7 @@ def elastic_shortening_loss(
     post_tensioned: bool = False,
     n_tendons: int = 1,
 ) -> float:
-    r"""콘크리트 탄성변형에 의한 프리스트레스 손실을 반환한다 (KDS 14 20 62 4.3).
+    r"""콘크리트 탄성변형에 의한 프리스트레스 손실을 반환한다 (KDS 14 20 60 4.3).
 
     프리텐션
 
@@ -255,7 +268,7 @@ def creep_loss(
     creep_coefficient: float = 2.0,
     f_cds: float = 0.0,
 ) -> float:
-    r"""콘크리트 크리프에 의한 프리스트레스 손실을 반환한다 (KDS 14 20 62 4.3).
+    r"""콘크리트 크리프에 의한 프리스트레스 손실을 반환한다 (KDS 14 20 60 4.3).
 
     .. math::
         \Delta f_p = \phi_{cr}\frac{E_p}{E_c}(f_{cgp} - f_{cds})
@@ -285,7 +298,7 @@ def shrinkage_loss(
     e_p: float,
     eps_sh: float = 300e-6,
 ) -> float:
-    r"""콘크리트 건조수축에 의한 프리스트레스 손실을 반환한다 (KDS 14 20 62 4.3).
+    r"""콘크리트 건조수축에 의한 프리스트레스 손실을 반환한다 (KDS 14 20 60 4.3).
 
     .. math::
         \Delta f_p = \varepsilon_{sh} E_p
@@ -306,7 +319,7 @@ def relaxation_loss(
     hours: float = 1000.0 * 24.0,
     low_relaxation: bool = True,
 ) -> float:
-    r"""긴장재 릴랙세이션에 의한 프리스트레스 손실을 반환한다 (KDS 14 20 62 4.3).
+    r"""긴장재 릴랙세이션에 의한 프리스트레스 손실을 반환한다 (KDS 14 20 60 4.3).
 
     .. math::
         \Delta f_p = f_{pi}\,\frac{\log(t)}{k}
@@ -416,7 +429,7 @@ class PrestressLosses:
         """손실 내역을 출력한다."""
         width = 56
         print("=" * width)
-        print("프리스트레스 손실 (KDS 14 20 62 4.3)")
+        print("프리스트레스 손실 (KDS 14 20 60 4.3)")
         print("=" * width)
         print(f"잭킹 응력          fpj    = {self.f_pj:10.2f} MPa")
         print("-" * width)
@@ -446,7 +459,7 @@ def tendon_stress_bonded(
     omega: float = 0.0,
     omega_prime: float = 0.0,
 ) -> float:
-    r"""부착 긴장재의 극한 응력 :math:`f_{ps}` 를 반환한다 (KDS 14 20 62 4.1).
+    r"""부착 긴장재의 극한 응력 :math:`f_{ps}` 를 반환한다 (KDS 14 20 60 4.1).
 
     .. math::
         f_{ps} = f_{pu}\left[1 - \frac{\gamma_p}{\beta_1}
@@ -487,7 +500,7 @@ def tendon_stress_unbonded(
     fpy: float,
     span_depth_ratio: float = 30.0,
 ) -> float:
-    r"""비부착 긴장재의 극한 응력 :math:`f_{ps}` 를 반환한다 (KDS 14 20 62 4.1).
+    r"""비부착 긴장재의 극한 응력 :math:`f_{ps}` 를 반환한다 (KDS 14 20 60 4.1).
 
     경간/깊이 비 :math:`\le 35`
 
@@ -532,7 +545,7 @@ def capacity_reduction_factor_psc(
     eps_t: float,
     column_type: str = "tie",
 ) -> float:
-    r"""프리스트레스트 부재의 강도감소계수를 반환한다 (KDS 14 20 10 표 4.2-1).
+    r"""프리스트레스트 부재의 강도감소계수를 반환한다 (KDS 14 20 10 4.3.3(2)).
 
     프리스트레스트 부재는 최외단 인장 긴장재·철근의 순인장변형률
     (프리스트레스에 의한 변형률 제외) 기준으로

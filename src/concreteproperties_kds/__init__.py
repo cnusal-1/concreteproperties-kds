@@ -13,7 +13,7 @@
 :mod:`~concreteproperties_kds.durability`      내구성 (KDS 14 20 40)
 :mod:`~concreteproperties_kds.detailing`       철근상세·정착·이음 (KDS 14 20 50, 52)
 :mod:`~concreteproperties_kds.slender`         세장 기둥 (KDS 14 20 20 4.4)
-:mod:`~concreteproperties_kds.psc`             프리스트레스트 (KDS 14 20 62)
+:mod:`~concreteproperties_kds.psc`             프리스트레스트 (KDS 14 20 60)
 :mod:`~concreteproperties_kds.biaxial`         2축 휨 간략식
 ============================= ==================================================
 """
@@ -61,7 +61,8 @@ from concreteproperties_kds.kds import (
     KDS14202022,
     compression_controlled_strain_limit,
     elastic_modulus,
-    minimum_flexural_reinforcement,
+    minimum_flexural_moment,
+    minimum_flexural_moment_alternative,
     minimum_net_tensile_strain,
     modulus_of_rupture,
     stress_block_parameters,
@@ -103,6 +104,7 @@ from concreteproperties_kds.serviceability import (
     minimum_thickness,
     service_steel_stress,
     shrinkage_temperature_reinforcement,
+    shrinkage_temperature_spacing,
     total_deflection,
 )
 from concreteproperties_kds.shear import (
@@ -195,7 +197,8 @@ __all__ = [
     "max_stirrup_spacing",
     "minimum_bar_spacing",
     "minimum_cover",
-    "minimum_flexural_reinforcement",
+    "minimum_flexural_moment",
+    "minimum_flexural_moment_alternative",
     "minimum_moment",
     "minimum_net_tensile_strain",
     "minimum_shear_reinforcement",
@@ -215,6 +218,7 @@ __all__ = [
     "shear_reinforcement_strength",
     "shrinkage_loss",
     "shrinkage_temperature_reinforcement",
+    "shrinkage_temperature_spacing",
     "slender",
     "slenderness_limit",
     "slenderness_ratio",

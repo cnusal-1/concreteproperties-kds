@@ -27,22 +27,31 @@ BAR_PROPERTIES: dict[str, tuple[float, float]] = {
     "D51": (50.8, 2027.0),
 }
 
-# 현장치기 콘크리트의 최소 피복두께 (KDS 14 20 50 4.3.1) [mm]
+# 프리스트레스하지 않는 부재의 현장치기콘크리트 최소 피복두께
+# (KDS 14 20 50 4.3.1) [mm]
 MINIMUM_COVER: dict[str, dict[str, float]] = {
+    "수중": {"전체": 100.0},
     "흙에영구히묻힘": {"전체": 75.0},
     "흙에접하거나옥외노출": {"D19이상": 50.0, "D16이하": 40.0},
     "옥내_슬래브벽체장선": {"D35초과": 40.0, "D35이하": 20.0},
     "옥내_보기둥": {"전체": 40.0},
-    "옥내_셸절판": {"D19이상": 20.0, "D16이하": 15.0},
+    "옥내_셸절판": {"전체": 20.0},
 }
 
-# 정착길이 약산식 계수 (KDS 14 20 52 표 4.1-1)
-# (조건 만족 여부, 철근 크기) : 계수
-DEVELOPMENT_SIMPLE_FACTOR: dict[tuple[bool, str], float] = {
-    (True, "D19이하"): 0.60,
-    (True, "D22이상"): 0.75,
-    (False, "D19이하"): 0.90,
-    (False, "D22이상"): 1.13,
+# fck >= 40 MPa 일 때 10 mm 를 저감할 수 있는 조건 (KDS 14 20 50 4.3.1(1)④나)
+COVER_REDUCTION_CONDITIONS = frozenset({"옥내_보기둥"})
+
+# 인장 이형철근의 기본정착길이 계수 (KDS 14 20 52 식 4.1-1)
+#   l_db = LDB_FACTOR * d_b * f_y / (lambda * sqrt(f_ck))
+LDB_FACTOR = 0.6
+
+# 기본정착길이에 곱하는 보정계수 (KDS 14 20 52 표 4.1-1)
+# (배근 조건 만족 여부, 철근 크기) : alpha*beta 에 곱하는 계수
+DEVELOPMENT_TABLE_FACTOR: dict[tuple[bool, str], float] = {
+    (True, "D19이하"): 0.8,
+    (True, "D22이상"): 1.0,
+    (False, "D19이하"): 1.2,
+    (False, "D22이상"): 1.5,
 }
 
 # 최소 정착길이 (mm)
@@ -97,13 +106,14 @@ def minimum_cover(
 ) -> float:
     """현장치기 콘크리트의 최소 피복두께를 반환한다 (KDS 14 20 50 4.3.1).
 
-    :math:`f_{ck} \\ge 40` MPa 인 경우 표의 값에서 10 mm 를 저감할 수 있다.
+    :math:`f_{ck} \\ge 40` MPa 인 경우 **옥내 보·기둥**에 한하여 10 mm 를
+    저감할 수 있다.
 
     Args:
         condition: :data:`MINIMUM_COVER` 의 키
         bar: 철근 호칭. 조건에 따라 필요. 기본값 ``None``.
-        fck: 콘크리트 설계기준압축강도 (MPa). 40 MPa 이상이면 10 mm 저감.
-            기본값 ``None`` (저감하지 않음).
+        fck: 콘크리트 설계기준압축강도 (MPa). 40 MPa 이상이고 조건이
+            ``"옥내_보기둥"`` 이면 10 mm 저감한다. 기본값 ``None``.
 
     Raises:
         ValueError: ``condition`` 이 정의되지 않았거나, 철근 구분이 필요한데
@@ -132,7 +142,12 @@ def minimum_cover(
         else:
             cover = table["D35초과"] if d_b > 34.9 else table["D35이하"]
 
-    if fck is not None and fck >= 40.0:
+    # fck >= 40 MPa 저감은 옥내 보·기둥에만 적용된다 (KDS 14 20 50 4.3.1(1)④나)
+    if (
+        fck is not None
+        and fck >= 40.0
+        and condition in COVER_REDUCTION_CONDITIONS
+    ):
         cover = max(cover - 10.0, 0.0)
 
     return float(cover)
@@ -185,51 +200,63 @@ def development_length_tension(
     favourable_spacing: bool = True,
     excess_reinforcement: float = 1.0,
 ) -> float:
-    r"""인장 이형철근의 정착길이를 반환한다 (KDS 14 20 52 4.1, 약산식).
+    r"""인장 이형철근의 정착길이를 반환한다 (KDS 14 20 52 4.1.2(2)).
+
+    기본정착길이 (식 4.1-1)
 
     .. math::
-        l_d = \frac{k\, d_b f_y}{\lambda \sqrt{f_{ck}}}\,\alpha\beta
-        \ \ge 300\ \text{mm}
+        l_{db} = \frac{0.6 d_b f_y}{\lambda \sqrt{f_{ck}}}
 
-    계수 :math:`k` 는 배근 조건과 철근 크기에 따라 다음과 같다.
+    에 표 4.1-1 의 보정계수를 곱한다.
 
-    | 조건 | D19 이하 | D22 이상 |
-    |---|---|---|
-    | 순간격·피복 :math:`\ge d_b`, 최소 스터럽 이상 배치 | 0.60 | 0.75 |
-    | 그 밖의 경우 | 0.90 | 1.13 |
+    +-------------------------------------------+----------------+----------------+
+    | 조건                                      | D19 이하       | D22 이상       |
+    +===========================================+================+================+
+    | 순간격 :math:`\ge d_b`, 피복 :math:`\ge`  | :math:`0.8`    | :math:`\alpha` |
+    | :math:`d_b`, 최소 스터럽·띠철근 배치;     | :math:`\alpha` | :math:`\beta`  |
+    | 또는 순간격 :math:`\ge 2d_b`, 피복        | :math:`\beta`  |                |
+    | :math:`\ge d_b`                           |                |                |
+    +-------------------------------------------+----------------+----------------+
+    | 기타                                      | :math:`1.2`    | :math:`1.5`    |
+    |                                           | :math:`\alpha` | :math:`\alpha` |
+    |                                           | :math:`\beta`  | :math:`\beta`  |
+    +-------------------------------------------+----------------+----------------+
 
-    :math:`\alpha` 는 철근배치 위치계수(상부철근 1.3, 그 밖 1.0),
-    :math:`\beta` 는 도막계수(에폭시 도막 1.5 또는 1.2, 도막 없음 1.0)이며
-    :math:`\alpha\beta \le 1.7` 이다.
+    :math:`\alpha` 는 철근배치 위치계수(상부철근 1.3, 기타 1.0),
+    :math:`\beta` 는 도막계수(피복 :math:`< 3d_b` 또는 순간격 :math:`< 6d_b`
+    인 에폭시 도막 1.5, 기타 에폭시 도막 1.2, 도막하지 않은 철근 1.0)이며,
+    에폭시 도막철근이 상부철근인 경우 :math:`\alpha\beta \le 1.7` 이다.
+    정착길이는 항상 300 mm 이상이어야 한다.
 
     Args:
         bar: 철근 호칭
         fy: 철근의 설계기준항복강도 (MPa)
         fck: 콘크리트 설계기준압축강도 (MPa)
-        lambda_c: 경량콘크리트계수. 기본값 ``1.0``.
+        lambda_c: 경량콘크리트계수 (KDS 14 20 10 4.3.4). 기본값 ``1.0``.
         top_bar: 상부철근이면 ``True`` (:math:`\alpha = 1.3`). 기본값 ``False``.
         epoxy_coated: 에폭시 도막철근이면 ``True``. 기본값 ``False``.
-        favourable_spacing: 순간격·피복·스터럽 조건을 만족하면 ``True``.
+        favourable_spacing: 표 4.1-1 의 첫 번째 조건을 만족하면 ``True``.
             기본값 ``True``.
         excess_reinforcement: 소요 철근량 / 배치 철근량. 1.0 미만이면 정착길이를
-            저감할 수 있다. 기본값 ``1.0``.
+            저감할 수 있다 (KDS 14 20 52 4.1.2(4)). 기본값 ``1.0``.
 
     Returns:
         인장 이형철근의 정착길이 (mm)
     """
     d_b = bar_diameter(bar=bar)
     size_key = "D19이하" if d_b < 19.0 else "D22이상"
-    k = DEVELOPMENT_SIMPLE_FACTOR[(favourable_spacing, size_key)]
+    table_factor = DEVELOPMENT_TABLE_FACTOR[(favourable_spacing, size_key)]
 
     alpha = 1.3 if top_bar else 1.0
-
     # 도막계수 : 피복이 3db 미만이거나 순간격이 6db 미만이면 1.5, 그 밖에는 1.2
     beta = (1.2 if favourable_spacing else 1.5) if epoxy_coated else 1.0
 
-    alpha_beta = min(alpha * beta, 1.7)
+    alpha_beta = alpha * beta
+    if top_bar and epoxy_coated:
+        alpha_beta = min(alpha_beta, 1.7)
 
-    l_d = k * d_b * fy / (lambda_c * np.sqrt(fck)) * alpha_beta
-    l_d *= excess_reinforcement
+    l_db = LDB_FACTOR * d_b * fy / (lambda_c * np.sqrt(fck))
+    l_d = l_db * table_factor * alpha_beta * excess_reinforcement
 
     return float(max(l_d, LD_MIN))
 

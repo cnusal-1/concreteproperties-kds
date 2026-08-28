@@ -29,7 +29,7 @@ KDS 는 단면 해석뿐 아니라 하중조합·전단·사용성·내구성·�
 | `durability` | KDS 14 20 40 (내구성) | [내구성](design_codes/kds_durability.md) |
 | `detailing` | KDS 14 20 50, 52 (철근상세·정착·이음) | [철근상세·정착·이음](design_codes/kds_detailing.md) |
 | `slender` | KDS 14 20 20 4.4 (세장 기둥) | [세장 기둥](design_codes/kds_slender.md) |
-| `psc` | KDS 14 20 62 (프리스트레스트) | [프리스트레스트](design_codes/kds_psc.md) |
+| `psc` | KDS 14 20 60 (프리스트레스트) | [프리스트레스트](design_codes/kds_psc.md) |
 | `biaxial` | (문헌 — 2축 휨 간략식) | [2축 휨 간략식](design_codes/kds_biaxial.md) |
 
 전체 설계 흐름을 하나로 엮은 예제는

@@ -20,7 +20,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-# 전단과 비틀림의 강도감소계수 (KDS 14 20 10 표 4.2-1)
+# 전단과 비틀림의 강도감소계수 (KDS 14 20 10 4.3.3(2))
 PHI_SHEAR = 0.75
 
 # 스터럽 최대 간격 (KDS 14 20 22 4.3.2)
@@ -39,7 +39,7 @@ def concrete_shear_strength(
     v_u: float | None = None,
     m_u: float | None = None,
 ) -> float:
-    r"""콘크리트가 부담하는 전단강도 :math:`V_c` 를 반환한다 (KDS 14 20 22 4.2).
+    r"""콘크리트가 부담하는 전단강도 :math:`V_c` 를 반환한다 (KDS 14 20 22 4.2.1).
 
     간편식
 
@@ -58,10 +58,15 @@ def concrete_shear_strength(
     축력이 작용하면 (``n_u``, ``a_g`` 지정) 다음 계수를 곱한다.
 
     .. math::
-        \text{압축}\ (N_u > 0):\ 1 + \frac{N_u}{14 A_g}, \qquad
-        \text{인장}\ (N_u < 0):\ 1 + \frac{0.29 N_u}{A_g}
+        \text{압축}\ (N_u > 0):\ 1 + \frac{N_u}{14 A_g}
+        \qquad \text{(식 4.2-2)}
 
-    인장력이 커서 계수가 음수가 되면 :math:`V_c = 0` 으로 본다.
+    .. math::
+        \text{인장}\ (N_u < 0):\ 1 + \frac{N_u}{3.5 A_g}
+        \qquad \text{(식 4.2-6)}
+
+    :math:`N_u` 는 인장일 때 음(−)이며, 계수가 음수가 되면
+    :math:`V_c = 0` 으로 본다.
 
     Args:
         fck: 콘크리트 설계기준압축강도 (MPa)
@@ -97,7 +102,10 @@ def concrete_shear_strength(
             msg = "축력이 작용하면 a_g (전체 단면적) 를 주어야 합니다."
             raise ValueError(msg)
 
-        factor = 1.0 + n_u / (14.0 * a_g) if n_u > 0 else 1.0 + 0.29 * n_u / a_g
+        # 압축은 식 (4.2-2), 인장은 식 (4.2-6)
+        factor = (
+            1.0 + n_u / (14.0 * a_g) if n_u > 0 else 1.0 + n_u / (3.5 * a_g)
+        )
         v_c *= max(factor, 0.0)
 
     return float(v_c)
@@ -110,7 +118,7 @@ def shear_reinforcement_strength(
     s: float,
     alpha: float = 90.0,
 ) -> float:
-    r"""전단철근이 부담하는 전단강도 :math:`V_s` 를 반환한다 (KDS 14 20 22 4.3).
+    r"""전단철근이 부담하는 전단강도 :math:`V_s` 를 반환한다 (KDS 14 20 22 4.3.4).
 
     수직스터럽 (:math:`\alpha = 90^\circ`)
 
@@ -152,7 +160,7 @@ def max_shear_reinforcement_strength(
     b_w: float,
     d: float,
 ) -> float:
-    r"""전단철근이 부담할 수 있는 전단강도의 상한을 반환한다 (KDS 14 20 22 4.3.1).
+    r"""전단철근이 부담할 수 있는 전단강도의 상한을 반환한다 (KDS 14 20 22 4.3.4(9)).
 
     .. math::
         V_s \le \frac{2}{3}\sqrt{f_{ck}}\, b_w d
@@ -463,7 +471,7 @@ def cracking_torque(
     p_cp: float,
     lambda_c: float = 1.0,
 ) -> float:
-    r"""균열 비틀림모멘트 :math:`T_{cr}` 를 반환한다 (KDS 14 20 22 4.4).
+    r"""균열 비틀림모멘트 :math:`T_{cr}` 를 반환한다 (KDS 14 20 22 4.4.1).
 
     .. math::
         T_{cr} = \frac{1}{3}\lambda\sqrt{f_{ck}}\, \frac{A_{cp}^2}{p_{cp}}
@@ -515,7 +523,9 @@ def torsional_strength(
     fyt: float,
     theta: float = 45.0,
 ) -> float:
-    r"""비틀림철근이 부담하는 비틀림강도 :math:`T_n` 을 반환한다 (KDS 14 20 22 4.4).
+    r"""비틀림철근이 부담하는 비틀림강도 :math:`T_n` 을 반환한다.
+
+    KDS 14 20 22 4.5.2
 
     .. math::
         T_n = \frac{2 A_o A_t f_{yt}}{s} \cot\theta, \qquad A_o = 0.85 A_{oh}
@@ -551,7 +561,7 @@ def longitudinal_torsion_reinforcement(
     fy: float,
     theta: float = 45.0,
 ) -> float:
-    r"""비틀림에 필요한 종방향 철근량 :math:`A_l` 을 반환한다 (KDS 14 20 22 4.4).
+    r"""비틀림에 필요한 종방향 철근량 :math:`A_l` 을 반환한다 (KDS 14 20 22 4.4.1).
 
     .. math::
         A_l = \frac{A_t}{s} p_h \frac{f_{yt}}{f_y} \cot^2\theta

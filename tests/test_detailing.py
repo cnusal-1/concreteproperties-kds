@@ -8,6 +8,7 @@ import pytest
 from concreteproperties_kds.detailing import (
     BAR_PROPERTIES,
     LD_MIN,
+    LDB_FACTOR,
     LDC_MIN,
     LDH_MIN,
     bar_area,
@@ -48,7 +49,8 @@ def test_bar_invalid():
 
 
 def test_minimum_cover():
-    """최소 피복두께 표를 확인한다."""
+    """최소 피복두께 표를 확인한다 (KDS 14 20 50 4.3.1)."""
+    assert minimum_cover(condition="수중") == pytest.approx(100.0)
     assert minimum_cover(condition="흙에영구히묻힘") == pytest.approx(75.0)
     assert minimum_cover(condition="옥내_보기둥") == pytest.approx(40.0)
     assert minimum_cover(
@@ -66,18 +68,27 @@ def test_minimum_cover():
 
 
 def test_minimum_cover_high_strength():
-    """fck >= 40 MPa 이면 10 mm 저감할 수 있다."""
+    """fck >= 40 MPa 저감은 옥내 보·기둥에만 적용된다 (KDS 14 20 50 4.3.1)."""
     assert minimum_cover(condition="옥내_보기둥", fck=40) == pytest.approx(30.0)
     assert minimum_cover(condition="옥내_보기둥", fck=27) == pytest.approx(40.0)
+
+    # 다른 조건에는 저감이 적용되지 않는다
+    assert minimum_cover(
+        condition="흙에접하거나옥외노출", bar="D22", fck=40
+    ) == pytest.approx(50.0)
+    assert minimum_cover(condition="흙에영구히묻힘", fck=60) == pytest.approx(75.0)
 
 
 def test_minimum_cover_invalid():
     """조건이 정의되지 않았거나 철근을 주지 않으면 예외가 발생한다."""
     with pytest.raises(ValueError, match="condition"):
-        minimum_cover(condition="수중")
+        minimum_cover(condition="해상")
 
     with pytest.raises(ValueError, match="bar"):
         minimum_cover(condition="흙에접하거나옥외노출")
+
+    with pytest.raises(ValueError, match="bar"):
+        minimum_cover(condition="옥내_슬래브벽체장선")
 
 
 def test_minimum_bar_spacing():
@@ -103,32 +114,42 @@ def test_minimum_bar_spacing_invalid():
 
 
 def test_development_length_tension_simple():
-    """인장 정착길이 약산식을 손계산과 대조한다.
+    """인장 정착길이를 손계산과 대조한다 (KDS 14 20 52 식 4.1-1, 표 4.1-1).
 
     D22, fy = 400, fck = 27, 배근 조건 만족 :
-    ld = 0.75 * 22.2 * 400 / sqrt(27) = 1281.7 mm
+    l_db = 0.6 * 22.2 * 400 / sqrt(27) = 1025.4 mm
+    표 4.1-1 계수 = 1.0 (D22 이상, 조건 만족)
     """
     l_d = development_length_tension(bar="D22", fy=400, fck=27)
 
-    assert l_d == pytest.approx(0.75 * 22.2 * 400 / np.sqrt(27), rel=1e-6)
-    assert l_d == pytest.approx(1281.7, rel=1e-3)
+    l_db = LDB_FACTOR * 22.2 * 400 / np.sqrt(27)
+    assert l_d == pytest.approx(l_db * 1.0, rel=1e-6)
+    assert l_d == pytest.approx(1025.4, rel=1e-3)
 
 
 def test_development_length_small_bar():
-    """D19 미만은 계수가 작다."""
+    """D19 미만은 표 4.1-1 의 계수가 0.8 이다."""
     l_d16 = development_length_tension(bar="D16", fy=400, fck=27)
 
-    assert l_d16 == pytest.approx(0.60 * 15.9 * 400 / np.sqrt(27), rel=1e-6)
+    l_db = LDB_FACTOR * 15.9 * 400 / np.sqrt(27)
+    assert l_d16 == pytest.approx(l_db * 0.8, rel=1e-6)
 
 
 def test_development_length_unfavourable():
-    """배근 조건을 만족하지 않으면 계수가 커진다."""
+    """배근 조건을 만족하지 않으면 표 4.1-1 의 계수가 1.0 에서 1.5 로 커진다."""
     l_ok = development_length_tension(bar="D22", fy=400, fck=27)
     l_ng = development_length_tension(
         bar="D22", fy=400, fck=27, favourable_spacing=False
     )
 
-    assert l_ng == pytest.approx(l_ok * 1.13 / 0.75)
+    assert l_ng == pytest.approx(l_ok * 1.5 / 1.0)
+
+    # D19 이하는 0.8 -> 1.2
+    l16_ok = development_length_tension(bar="D16", fy=400, fck=27)
+    l16_ng = development_length_tension(
+        bar="D16", fy=400, fck=27, favourable_spacing=False
+    )
+    assert l16_ng == pytest.approx(l16_ok * 1.2 / 0.8)
 
 
 def test_development_length_top_bar():
@@ -140,7 +161,7 @@ def test_development_length_top_bar():
 
 
 def test_development_length_alpha_beta_capped():
-    """alpha*beta 는 1.7 을 넘지 않는다."""
+    """에폭시 도막 상부철근의 alpha*beta 는 1.7 을 넘지 않는다."""
     l_bot = development_length_tension(bar="D22", fy=400, fck=27)
     l_top_epoxy = development_length_tension(
         bar="D22", fy=400, fck=27, top_bar=True, epoxy_coated=True

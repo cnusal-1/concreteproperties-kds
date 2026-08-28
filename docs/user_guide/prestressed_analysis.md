@@ -31,12 +31,12 @@ strand = SteelStrand(
 )
 ```
 
-KDS 14 20 62(프리스트레스트 콘크리트 구조)의 강연선 규격은 KS D 7002 를 따른다.
+KDS 14 20 60(프리스트레스트 콘크리트 구조)의 강연선 규격은 KS D 7002 를 따른다.
 대표적으로 SWPC 7B 는 $f_{pu} = 1860$ MPa, $f_{py} \ge 0.85 f_{pu}$ 이다.
 
 > **주의** — 이 저장소의 KDS 설계기준 모듈은 **철근콘크리트 단면**을 대상으로 한다.
 > `KDS.assign_concrete_section()` 은 `ConcreteSection` 을 전제로 하며,
-> `PrestressedSection` 에 대한 강도감소계수 규정(KDS 14 20 62)은 구현되어 있지 않다.
+> `PrestressedSection` 에 대한 강도감소계수 규정(KDS 14 20 60)은 구현되어 있지 않다.
 > PSC 단면은 `PrestressedSection` 의 메서드를 직접 사용하고, 강도감소계수는
 > 사용자가 적용한다.
 

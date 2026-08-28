@@ -34,20 +34,21 @@ if TYPE_CHECKING:
     from concreteproperties.concrete_section import ConcreteSection
 
 
-# KDS 14 20 20 표 4.1-1 등가직사각형 응력블록의 계수
+# KDS 14 20 20 표 4.1-2 등가직사각형 응력블록의 계수
 # fck (MPa) : 콘크리트 설계기준압축강도
 # eps_cu    : 콘크리트 압축연단의 극한변형률
-# eta       : 등가직사각형 응력블록의 응력 강도 계수 (압축응력 = eta * 0.85 * fck)
+# eta       : 콘크리트 등가직사각형 압축응력블록의 크기를 나타내는 계수
+#             (압축응력 = eta * 0.85 * fck)
 # beta_1    : 등가직사각형 응력블록의 깊이 계수 (a = beta_1 * c)
 STRESS_BLOCK_FCK = [40.0, 50.0, 60.0, 70.0, 80.0, 90.0]
 STRESS_BLOCK_EPS_CU = [0.0033, 0.0032, 0.0031, 0.0030, 0.0029, 0.0028]
 STRESS_BLOCK_ETA = [1.00, 0.97, 0.95, 0.91, 0.87, 0.84]
 STRESS_BLOCK_BETA_1 = [0.80, 0.80, 0.76, 0.74, 0.72, 0.70]
 
-# 철근 탄성계수 (KDS 14 20 10 4.3.4) [MPa]
+# 철근 탄성계수 (KDS 14 20 10 4.3.3(2), 식 4.3-5) [MPa]
 ES = 200.0e3
 
-# KDS 14 20 10 표 4.2-1 강도감소계수
+# KDS 14 20 10 4.3.3(2) 강도감소계수
 PHI_TENSION = 0.85  # 인장지배단면
 PHI_COMP_TIE = 0.65  # 압축지배단면 - 띠철근
 PHI_COMP_SPIRAL = 0.70  # 압축지배단면 - 나선철근
@@ -58,7 +59,7 @@ ALPHA_MAX_SPIRAL = 0.85  # 나선철근 기둥
 
 
 def stress_block_parameters(fck: float) -> tuple[float, float, float]:
-    r"""등가직사각형 응력블록의 계수를 반환한다 (KDS 14 20 20 표 4.1-1).
+    r"""등가직사각형 응력블록의 계수를 반환한다 (KDS 14 20 20 표 4.1-2).
 
     표에 없는 중간 강도는 선형보간하며, :math:`f_{ck} \leq 40` MPa 인 경우
     :math:`\varepsilon_{cu} = 0.0033`, :math:`\eta = 1.00`, :math:`\beta_1 = 0.80`
@@ -122,7 +123,7 @@ def modulus_of_rupture(fck: float, lambda_c: float = 1.0) -> float:
 
     Args:
         fck: 콘크리트 설계기준압축강도 (MPa)
-        lambda_c: 경량콘크리트계수 :math:`\lambda` (KDS 14 20 10 4.4). 보통중량
+        lambda_c: 경량콘크리트계수 :math:`\lambda` (KDS 14 20 10 4.3.3(2)). 보통중량
             콘크리트 ``1.0``, 모래경량 ``0.85``, 전경량 ``0.75``. 기본값 ``1.0``.
 
     Returns:
@@ -183,35 +184,46 @@ def minimum_net_tensile_strain(fy: float) -> float:
     return 2.0 * fy / ES
 
 
-def minimum_flexural_reinforcement(
-    fck: float,
-    fy: float,
-    b_w: float,
-    d: float,
-) -> float:
-    r"""휨부재의 최소 철근량을 반환한다 (KDS 14 20 20 4.2.2).
+def minimum_flexural_moment(m_cr: float) -> float:
+    r"""휨부재가 확보해야 할 최소 설계휨강도를 반환한다 (KDS 14 20 20 4.2.2).
 
     .. math::
-        A_{s,min} = \max \left(
-        \frac{0.25 \sqrt{f_{ck}}}{f_y} b_w d, \;
-        \frac{1.4}{f_y} b_w d \right)
+        \phi M_n \ge 1.2 M_{cr}
+
+    :math:`M_{cr}` 은 KDS 14 20 30 식 (4.2-2) 에 따른 균열휨모멘트이다.
 
     Args:
-        fck: 콘크리트 설계기준압축강도 (MPa)
-        fy: 철근의 설계기준항복강도 (MPa)
-        b_w: 복부 폭 (mm)
-        d: 유효깊이 (mm)
+        m_cr: 균열휨모멘트 (N·mm)
 
     Returns:
-        최소 휨철근량 (mm\ :sup:`2`)
+        요구 최소 설계휨강도 (N·mm)
     """
-    return max(0.25 * np.sqrt(fck) / fy, 1.4 / fy) * b_w * d
+    return float(1.2 * m_cr)
+
+
+def minimum_flexural_moment_alternative(m_u: float) -> float:
+    r"""최소 철근량 규정의 대체 조건을 반환한다 (KDS 14 20 20 4.2.2(2)).
+
+    해석에 필요한 철근량보다 1/3 이상 인장철근을 더 배치하여
+
+    .. math::
+        \phi M_n \ge \frac{4}{3} M_u
+
+    를 만족하면 :func:`minimum_flexural_moment` 의 조건을 적용하지 않을 수 있다.
+
+    Args:
+        m_u: 계수 휨모멘트 (N·mm)
+
+    Returns:
+        요구 최소 설계휨강도 (N·mm)
+    """
+    return float(4.0 / 3.0 * m_u)
 
 
 class KDS14202022(DesignCode):
     """KDS 14 20 (콘크리트구조 설계기준) 설계기준 클래스.
 
-    강도설계법에 따라 공칭강도를 계산하고 KDS 14 20 10 표 4.2-1 의 강도감소계수
+    강도설계법에 따라 공칭강도를 계산하고 KDS 14 20 10 4.3.3(2) 의 강도감소계수
     :math:`\\phi` 를 적용한 설계강도를 산정한다.
 
     .. note::
@@ -316,14 +328,14 @@ class KDS14202022(DesignCode):
 
           - *극한 응력-변형률 관계*: 등가직사각형 응력블록, 압축응력
             :math:`\eta (0.85 f_{ck})`, 깊이 :math:`a = \beta_1 c`
-            (KDS 14 20 20 4.1.1, 표 4.1-1)
+            (KDS 14 20 20 4.1.1(8), 표 4.1-2)
 
           - *파괴계수*: :math:`f_r = 0.63 \lambda \sqrt{f_{ck}}`
             (KDS 14 20 30 4.2.1)
 
         Args:
             compressive_strength: 콘크리트 설계기준압축강도 :math:`f_{ck}` (MPa)
-            lambda_c: 경량콘크리트계수 :math:`\lambda` (KDS 14 20 10 4.4).
+            lambda_c: 경량콘크리트계수 :math:`\lambda` (KDS 14 20 10 4.3.3(2)).
                 기본값 ``1.0``.
             m_c: 콘크리트의 단위질량 (kg/m\ :sup:`3`). 기본값 ``2300``.
             colour: 도시할 때 사용할 콘크리트의 색. 기본값 ``"lightgrey"``.
@@ -375,7 +387,7 @@ class KDS14202022(DesignCode):
 
           - *단위질량*: 7850 kg/m\ :sup:`3` (7.85 x 10\ :sup:`-6` kg/mm\ :sup:`3`)
 
-          - *탄성계수*: :math:`E_s = 200{,}000` MPa (KDS 14 20 10 4.3.4)
+          - *탄성계수*: :math:`E_s = 200{,}000` MPa (KDS 14 20 10 4.3.3(2))
 
           - *응력-변형률 관계*: 완전탄소성 (KDS 14 20 20 4.1.1)
 
@@ -507,7 +519,7 @@ class KDS14202022(DesignCode):
         self,
         eps_t: float,
     ) -> float:
-        r"""강도감소계수를 반환한다 (KDS 14 20 10 표 4.2-1).
+        r"""강도감소계수를 반환한다 (KDS 14 20 10 4.3.3(2)).
 
         최외단 인장철근의 순인장변형률 :math:`\varepsilon_t` 에 따라
 
@@ -578,6 +590,50 @@ class KDS14202022(DesignCode):
         eps_t_min = minimum_net_tensile_strain(fy=self.fy)
 
         return eps_t, eps_t_min, bool(eps_t >= eps_t_min)
+
+    def check_minimum_flexural_reinforcement(
+        self,
+        theta: float = 0,
+        m_u: float | None = None,
+        **kwargs,
+    ) -> tuple[float, float, float, bool]:
+        r"""휨부재의 최소 철근량 조건을 검토한다 (KDS 14 20 20 4.2.2).
+
+        .. math::
+            \phi M_n \ge 1.2 M_{cr}
+
+        ``m_u`` 를 주면 대체 조건 :math:`\phi M_n \ge \frac{4}{3} M_u`
+        (KDS 14 20 20 4.2.2(2)) 도 함께 검토하여, 둘 중 하나만 만족하면
+        조건을 만족한 것으로 본다.
+
+        Args:
+            theta: 중립축이 수평축과 이루는 각 (radian). 기본값 ``0``.
+            m_u: 계수 휨모멘트 (N·mm). 주면 대체 조건을 함께 검토한다.
+                기본값 ``None``.
+            kwargs: :meth:`calculate_cracked_properties` 에 전달할 인자
+
+        Returns:
+            설계휨강도, 균열휨모멘트, 요구 설계휨강도, 만족 여부
+            (``phi_m_n``, ``m_cr``, ``m_required``, ``ok``)
+        """
+        f_res, _, _ = self.ultimate_bending_capacity(theta=theta, n_design=0)
+        phi_m_n = float(np.hypot(f_res.m_x, f_res.m_y))
+
+        cracked = self.concrete_section.calculate_cracked_properties(
+            theta=theta, **kwargs
+        )
+        m_cr = float(cracked.m_cr)
+
+        m_required = minimum_flexural_moment(m_cr=m_cr)
+        ok = phi_m_n >= m_required
+
+        if not ok and m_u is not None:
+            m_required = min(
+                m_required, minimum_flexural_moment_alternative(m_u=m_u)
+            )
+            ok = phi_m_n >= m_required
+
+        return phi_m_n, m_cr, m_required, bool(ok)
 
     def ultimate_bending_capacity(  # pyright: ignore [reportIncompatibleMethodOverride]
         self,

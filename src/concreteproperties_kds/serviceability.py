@@ -1,7 +1,11 @@
 """사용성 설계 (KDS 14 20 30).
 
 처짐 계산(유효단면2차모멘트, 장기처짐), 처짐 한계, 처짐 계산을 생략할 수 있는
-최소 두께, 균열 제어를 위한 휨철근 간격 제한을 다룬다.
+최소 두께를 다룬다.
+
+균열 제어를 위한 휨철근 간격은 KDS 14 20 30 4.1(1) 이 KDS 14 20 20(4.2.3) 으로
+위임하므로, 그 조문의 식 (4.2-3)·(4.2-4) 를 구현하였다. 수축·온도철근은
+KDS 14 20 50(4.6.2) 에 따른다.
 """
 
 from __future__ import annotations
@@ -10,7 +14,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-# 장기처짐 계수 (KDS 14 20 30 4.2.1) - 지속하중 재하기간별 시간경과계수
+# 장기처짐 계수 (KDS 14 20 30 4.2.1(5), 식 4.2-4) - 시간경과계수
 CREEP_FACTOR: dict[str, float] = {
     "3개월": 1.0,
     "6개월": 1.2,
@@ -18,7 +22,8 @@ CREEP_FACTOR: dict[str, float] = {
     "5년이상": 2.0,
 }
 
-# 처짐 계산을 생략할 수 있는 보와 1방향 슬래브의 최소 두께 (KDS 14 20 30 표 4.2-1)
+# 처짐을 계산하지 않는 경우의 보 또는 1방향 슬래브의 최소 두께
+# (KDS 14 20 30 표 4.2-1)
 # fy = 400 MPa 기준, 경간 l 에 대한 비
 MINIMUM_THICKNESS_RATIO: dict[str, dict[str, float]] = {
     "1방향슬래브": {
@@ -53,7 +58,7 @@ DEFLECTION_TARGET_LABEL: dict[str, str] = {
     "attached": "비구조 요소 부착 후 발생 처짐",
 }
 
-# 균열 제어 계수 kappa_cr (KDS 14 20 30 4.3.1)
+# 균열 제어 계수 kappa_cr (KDS 14 20 20 4.2.3(4))
 KAPPA_CR_DRY = 280.0  # 건조환경
 KAPPA_CR_OTHER = 210.0  # 그 밖의 환경
 
@@ -154,11 +159,17 @@ def minimum_thickness(
     member: str = "보",
     support: str = "단순지지",
     fy: float = 400.0,
+    m_c: float = 2300.0,
 ) -> float:
-    r"""처짐 계산을 생략할 수 있는 최소 두께를 반환한다 (KDS 14 20 30 표 4.2-1).
+    r"""처짐을 계산하지 않는 경우의 최소 두께를 반환한다 (KDS 14 20 30 표 4.2-1).
 
-    :math:`f_y \ne 400` MPa 인 경우 표의 값에
-    :math:`(0.43 + f_y / 700)` 을 곱한다.
+    표의 값은 보통중량콘크리트(:math:`m_c = 2300` kg/m\ :sup:`3`)와
+    :math:`f_y = 400` MPa 철근을 사용한 부재에 대한 값이며, 다른 조건에는
+    다음 보정을 적용한다.
+
+    - 단위질량 1,500~2,000 kg/m\ :sup:`3` 의 구조용 경량콘크리트 :
+      :math:`(1.65 - 0.00031 m_c) \ge 1.09` 를 곱한다.
+    - :math:`f_y \ne 400` MPa : :math:`(0.43 + f_y / 700)` 을 곱한다.
 
     Args:
         span: 경간 :math:`l` (mm)
@@ -166,6 +177,7 @@ def minimum_thickness(
         support: ``"단순지지"``, ``"1단연속"``, ``"양단연속"``, ``"캔틸레버"``.
             기본값 ``"단순지지"``.
         fy: 철근의 설계기준항복강도 (MPa). 기본값 ``400``.
+        m_c: 콘크리트의 단위질량 (kg/m\ :sup:`3`). 기본값 ``2300``.
 
     Raises:
         ValueError: ``member`` 또는 ``support`` 가 정의되지 않은 값인 경우
@@ -184,6 +196,10 @@ def minimum_thickness(
         raise ValueError(msg)
 
     h_min = span / ratios[support]
+
+    # 구조용 경량콘크리트 보정
+    if 1500.0 <= m_c <= 2000.0:
+        h_min *= max(1.65 - 0.00031 * m_c, 1.09)
 
     if abs(fy - 400.0) > 1e-9:
         h_min *= 0.43 + fy / 700.0
@@ -249,7 +265,7 @@ def max_bar_spacing(
     c_c: float,
     dry_environment: bool = True,
 ) -> float:
-    r"""균열 제어를 위한 휨철근의 최대 간격을 반환한다 (KDS 14 20 30 4.3.1).
+    r"""균열 제어를 위한 휨철근의 최대 간격을 반환한다 (KDS 14 20 20 4.2.3(4)).
 
     .. math::
         s = 375\left(\frac{\kappa_{cr}}{f_s}\right) - 2.5 c_c
@@ -282,7 +298,7 @@ def max_bar_spacing(
 
 
 def service_steel_stress(fy: float) -> float:
-    r"""사용하중 상태의 인장철근 응력 근사값을 반환한다 (KDS 14 20 30 4.3.1).
+    r"""사용하중 상태의 인장철근 응력 근사값을 반환한다 (KDS 14 20 20 4.2.3(4)).
 
     .. math::
         f_s = \frac{2}{3} f_y
@@ -440,7 +456,7 @@ def check_crack_control(
     fs: float | None = None,
     dry_environment: bool = True,
 ) -> tuple[float, float, bool]:
-    r"""균열 제어를 위한 철근 간격 조건을 검토한다 (KDS 14 20 30 4.3.1).
+    r"""균열 제어를 위한 철근 간격 조건을 검토한다 (KDS 14 20 20 4.2.3(4)).
 
     Args:
         bar_spacing: 배치된 휨철근의 중심 간격 (mm)
@@ -464,27 +480,53 @@ def check_crack_control(
 def shrinkage_temperature_reinforcement(
     fy: float,
     a_g: float,
+    width: float = 1000.0,
 ) -> float:
-    r"""건조수축·온도철근량을 반환한다 (KDS 14 20 30 4.4).
+    r"""건조수축·온도철근량을 반환한다 (KDS 14 20 50 4.6.2).
 
-    1방향 슬래브의 수축·온도철근비는 다음 값 이상이어야 한다.
+    1방향 철근콘크리트 슬래브의 수축·온도철근비는 다음 값 이상이어야 하나,
+    어떤 경우에도 0.0014 이상이어야 한다.
 
     .. math::
-        \rho = \begin{cases}
-        0.0020 & f_y \le 400 \text{ MPa} \\
-        \max\left(0.0020 \times \dfrac{400}{f_y},\ 0.0014\right) & f_y > 400
+
+ho = egin{cases}
+        0.0020 & f_y \le 400 	ext{ MPa} \
+        0.0020 	imes \dfrac{400}{f_y} & f_y > 400 	ext{ MPa}
         \end{cases}
+
+    다만 단위 폭 1 m 당 1,800 mm\ :sup:`2` 보다 크게 취할 필요는 없다.
 
     Args:
         fy: 철근의 설계기준항복강도 (MPa)
         a_g: 콘크리트 전체 단면적 (mm\ :sup:`2`)
+        width: ``a_g`` 에 해당하는 폭 (mm). 1,800 mm\ :sup:`2`/m 상한을
+            적용하기 위해 사용한다. 기본값 ``1000``.
 
     Returns:
         수축·온도철근량 (mm\ :sup:`2`)
     """
-    rho = 0.0020 if fy <= 400 else max(0.0020 * 400.0 / fy, 0.0014)
+    rho = max(0.0020 if fy <= 400 else 0.0020 * 400.0 / fy, 0.0014)
+    a_s = rho * a_g
 
-    return float(rho * a_g)
+    # 단위 폭 m 당 1,800 mm^2 상한
+    if width > 0:
+        a_s = min(a_s, 1800.0 * width / 1000.0)
+
+    return float(a_s)
+
+
+def shrinkage_temperature_spacing(thickness: float) -> float:
+    """수축·온도철근의 최대 간격을 반환한다 (KDS 14 20 50 4.6.2(3)).
+
+    슬래브 두께의 5배 이하, 또한 450 mm 이하로 한다.
+
+    Args:
+        thickness: 슬래브 두께 (mm)
+
+    Returns:
+        최대 간격 (mm)
+    """
+    return float(min(5.0 * thickness, 450.0))
 
 
 def cracking_moment(

@@ -1,7 +1,7 @@
 """예제 16 - 프리스트레스트 콘크리트.
 
 프리스트레스 손실을 항목별로 계산하고, 허용응력과 설계 휨강도를 검토한다.
-(KDS 14 20 62)
+(KDS 14 20 60)
 
 실행:
     python 16_PSC.py
@@ -56,7 +56,7 @@ def main() -> None:
     # 허용응력
     # ------------------------------------------------------------------
     print("=" * width)
-    print("허용응력 (KDS 14 20 62 4.2)")
+    print("허용응력 (KDS 14 20 60 4.2)")
     print("=" * width)
     f_pj_allow = allowable_tendon_stress(fpu=FPU, fpy=FPY, stage="jacking")
     f_pa_allow = allowable_tendon_stress(fpu=FPU, fpy=FPY, stage="anchorage")
@@ -124,7 +124,7 @@ def main() -> None:
     )
 
     print("=" * width)
-    print("긴장재의 극한 응력 (KDS 14 20 62 4.1)")
+    print("긴장재의 극한 응력 (KDS 14 20 60 4.1)")
     print("=" * width)
     print(f"긴장재비             rho_p = {rho_p:10.5f}")
     print(f"부착   긴장재        fps   = {f_ps_bonded:10.1f} MPa")
@@ -175,7 +175,7 @@ def main() -> None:
     print(f"공칭 휨강도          Mn    = {u_res.m_x / 1e6:10.2f} kN.m")
     print(f"설계 휨강도      phi*Mn    = {f_res.m_x / 1e6:10.2f} kN.m")
     print()
-    print("강도감소계수 (KDS 14 20 10 표 4.2-1, 프리스트레스트 부재)")
+    print("강도감소계수 (KDS 14 20 10 4.3.3(2), 프리스트레스트 부재)")
     print(f"{'et':>10} {'phi':>8}")
     print("-" * width)
     for e in [0.001, 0.002, 0.003, 0.0035, 0.004, 0.005, 0.010]:

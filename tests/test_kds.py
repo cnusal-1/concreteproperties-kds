@@ -18,7 +18,8 @@ from concreteproperties_kds import (
     KDS,
     compression_controlled_strain_limit,
     elastic_modulus,
-    minimum_flexural_reinforcement,
+    minimum_flexural_moment,
+    minimum_flexural_moment_alternative,
     minimum_net_tensile_strain,
     modulus_of_rupture,
     stress_block_parameters,
@@ -65,7 +66,7 @@ def test_elastic_modulus(fck, e_c):
     ],
 )
 def test_stress_block_parameters(fck, eps_cu, eta, beta_1):
-    """등가직사각형 응력블록 계수가 KDS 14 20 20 표 4.1-1 과 일치하는지 확인한다."""
+    """등가직사각형 응력블록 계수가 KDS 14 20 20 표 4.1-2 과 일치하는지 확인한다."""
     res = stress_block_parameters(fck=fck)
 
     assert res[0] == pytest.approx(eps_cu)
@@ -111,15 +112,16 @@ def test_minimum_net_tensile_strain():
     assert minimum_net_tensile_strain(fy=500) == pytest.approx(0.005)
 
 
-def test_minimum_flexural_reinforcement():
-    """최소 휨철근량을 확인한다 (KDS 14 20 20 4.2.2)."""
-    # fck = 24, fy = 400 -> 1.4/fy 가 지배
-    a_s = minimum_flexural_reinforcement(fck=24, fy=400, b_w=300, d=540)
-    assert a_s == pytest.approx(1.4 / 400 * 300 * 540)
+def test_minimum_flexural_moment():
+    """최소 철근량 조건 phi*Mn >= 1.2Mcr 를 확인한다 (KDS 14 20 20 4.2.2)."""
+    assert minimum_flexural_moment(m_cr=88.4e6) == pytest.approx(1.2 * 88.4e6)
 
-    # fck = 60, fy = 400 -> 0.25*sqrt(fck)/fy 가 지배
-    a_s = minimum_flexural_reinforcement(fck=60, fy=400, b_w=300, d=540)
-    assert a_s == pytest.approx(0.25 * np.sqrt(60) / 400 * 300 * 540)
+
+def test_minimum_flexural_moment_alternative():
+    """대체 조건 phi*Mn >= (4/3)Mu 를 확인한다 (KDS 14 20 20 4.2.2(2))."""
+    assert minimum_flexural_moment_alternative(m_u=300e6) == pytest.approx(
+        4 / 3 * 300e6
+    )
 
 
 def test_material_limits():
@@ -423,3 +425,32 @@ def test_meshed_reinforcement_rejected():
 
     with pytest.raises(ValueError, match="메시화된 철근"):
         kds.assign_concrete_section(ConcreteSection(geom))
+
+
+def test_check_minimum_flexural_reinforcement():
+    """단면의 설계휨강도가 1.2Mcr 이상인지 검토한다 (KDS 14 20 20 4.2.2)."""
+    kds, _ = singly_reinforced_beam(n_bar=4)
+    phi_m_n, m_cr, m_required, ok = kds.check_minimum_flexural_reinforcement()
+
+    assert m_required == pytest.approx(1.2 * m_cr)
+    assert phi_m_n > 0
+    assert ok is True
+
+    # 철근이 매우 적으면 조건을 만족하지 못한다
+    kds, _ = singly_reinforced_beam(n_bar=2, area=71.33)
+    _, m_cr, m_required, ok = kds.check_minimum_flexural_reinforcement()
+    assert m_required == pytest.approx(1.2 * m_cr)
+    assert ok is False
+
+
+def test_check_minimum_flexural_reinforcement_alternative():
+    """(4/3)Mu 대체 조건이 적용되는지 확인한다 (KDS 14 20 20 4.2.2(2))."""
+    kds, _ = singly_reinforced_beam(n_bar=2, area=71.33)
+
+    _, _, _, ok_strict = kds.check_minimum_flexural_reinforcement()
+    phi_m_n, _, _, ok_alt = kds.check_minimum_flexural_reinforcement(
+        m_u=0.5 * 20e6
+    )
+
+    assert ok_strict is False
+    assert ok_alt is (phi_m_n >= 4 / 3 * 0.5 * 20e6)

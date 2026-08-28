@@ -29,7 +29,7 @@ def main(plot: bool = False) -> None:
         plot: 응력-변형률 관계를 도시할지 여부
     """
     print("=" * 78)
-    print("콘크리트 재료 상수 (KDS 14 20 10 4.3.3, KDS 14 20 20 표 4.1-1)")
+    print("콘크리트 재료 상수 (KDS 14 20 10 4.3.3, KDS 14 20 20 표 4.1-2)")
     print("=" * 78)
     print(
         f"{'fck':>6} {'Ec':>10} {'eps_cu':>9} {'eta':>7} {'beta_1':>8} "

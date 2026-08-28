@@ -21,7 +21,7 @@ from concreteproperties_kds import shear                     # 모듈 객체
 | `durability` | KDS 14 20 40 — 내구성 |
 | `detailing` | KDS 14 20 50, 52 — 철근상세·정착·이음 |
 | `slender` | KDS 14 20 20 4.4 — 세장 기둥 |
-| `psc` | KDS 14 20 62 — 프리스트레스트 |
+| `psc` | KDS 14 20 60 — 프리스트레스트 |
 | `biaxial` | 2축 휨 간략식 |
 
 ---
@@ -84,7 +84,7 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 
 | 함수 | 반환 | 근거 |
 |---|---|---|
-| `stress_block_parameters(fck)` | `(eps_cu, eta, beta_1)` | KDS 14 20 20 표 4.1-1 |
+| `stress_block_parameters(fck)` | `(eps_cu, eta, beta_1)` | KDS 14 20 20 표 4.1-2 |
 | `elastic_modulus(fck, m_c=2300.0)` | 콘크리트 탄성계수 (MPa) | KDS 14 20 10 4.3.3 |
 | `modulus_of_rupture(fck, lambda_c=1.0)` | 파괴계수 (MPa) | KDS 14 20 30 4.2.1 |
 | `compression_controlled_strain_limit(fy)` | $\varepsilon_y$ | KDS 14 20 20 4.1.2 |
@@ -200,7 +200,7 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 | `check_slenderness(...)` → `SlendernessCheck` | 종합 검토 |
 | `PHI_K` | 0.75 |
 
-## `psc` — 프리스트레스트 (KDS 14 20 62)
+## `psc` — 프리스트레스트 (KDS 14 20 60)
 
 | 이름 | 내용 |
 |---|---|
