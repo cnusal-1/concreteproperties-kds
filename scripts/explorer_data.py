@@ -38,6 +38,13 @@ TEE_HF = [70, 90, 110, 150]
 TEE_NBAR = [4, 6, 8, 10]
 TEE_FCK = [24, 27, 35, 40]
 
+# L1 탭 — 등가블록과 포물선-직선을 같은 축력에서 비교한다
+PARA_FY = [400, 500]
+PARA_STEPS = 13
+
+# L3 탭 — 단면 깊이를 바꿔 가며 보는 민감도
+BEAM_D = [450, 500, 550, 600, 650, 700, 750, 800]
+
 D22 = 387.1  # D22 공칭 단면적 (mm^2)
 DIA22 = 22.0
 
@@ -242,12 +249,88 @@ def tee_case(fck, fy, h_f, n_bar):
     }
 
 
+# ── L1 · 등가블록 vs 포물선-직선 ──────────────────────────────────────────
+def column_profile(fck, fy, profile):
+    """500 x 500 띠철근 기둥을 지정한 극한 응력-변형률 관계로 만든다."""
+    kds = KDS()
+    conc = kds.create_concrete_material(
+        compressive_strength=fck, ultimate_profile=profile
+    )
+    steel = kds.create_steel_material(yield_strength=fy)
+    geom = concrete_rectangular_section(
+        d=500, b=500,
+        dia_top=DIA22, area_top=D22, n_top=3, c_top=50,
+        dia_bot=DIA22, area_bot=D22, n_bot=3, c_bot=50,
+        dia_side=DIA22, area_side=D22, n_side=1, c_side=50,
+        n_circle=16, conc_mat=conc, steel_mat=steel,
+    )
+    kds.assign_concrete_section(ConcreteSection(geom))
+    return kds
+
+
+def parabolic_case(fck, fy):
+    """같은 축력에서 두 관계의 휨강도를 나란히 구한다.
+
+    상관도 생성은 두 관계가 서로 다른 제어점을 잡으므로, 축력을 직접 지정해
+    같은 조건에서 비교한다.
+    """
+    blk = column_profile(fck, fy, "block")
+    par = column_profile(fck, fy, "parabolic")
+
+    n_top = min(blk.squash_load, par.squash_load) * 0.82
+    pts = []
+    for i in range(PARA_STEPS):
+        n_d = n_top * i / (PARA_STEPS - 1)
+        try:
+            m_b = blk.ultimate_bending_capacity(n_design=n_d)[1].m_x
+            m_p = par.ultimate_bending_capacity(n_design=n_d)[1].m_x
+        except Exception:  # noqa: BLE001 - 축강도를 넘는 점은 건너뛴다
+            continue
+        pts.append([_round(n_d / 1e3, 1), _round(m_b / 1e6, 1), _round(m_p / 1e6, 1)])
+
+    return {"pts": pts}
+
+
+# ── L3 · 단면 깊이 ────────────────────────────────────────────────────────
+def depth_case(fck, fy, n_bar, d):
+    """깊이를 바꾼 보의 설계휨강도와 변형률만 가볍게 구한다."""
+    kds = beam_depth(fck, fy, n_bar, d)
+    f_res, u_res, phi = kds.ultimate_bending_capacity()
+    eps_t = kds.net_tensile_strain(theta=0, d_n=u_res.d_n)
+
+    return {
+        "dEff": _round(_effective_depth(kds.concrete_section), 1),
+        "epsT": _round(eps_t, 6),
+        "phi": _round(phi, 4),
+        "mn": _round(u_res.m_x / 1e6, 1),
+        "phiMn": _round(f_res.m_x / 1e6, 1),
+        "cls": kds.section_classification(eps_t),
+    }
+
+
+def beam_depth(fck, fy, n_bar, d):
+    """깊이 d 의 단철근 보."""
+    kds = KDS()
+    conc = kds.create_concrete_material(compressive_strength=fck)
+    steel = kds.create_steel_material(yield_strength=fy)
+    geom = concrete_rectangular_section(
+        d=d, b=400,
+        dia_top=DIA22, area_top=D22, n_top=0, c_top=50,
+        dia_bot=DIA22, area_bot=D22, n_bot=n_bar, c_bot=50,
+        n_circle=16, conc_mat=conc, steel_mat=steel,
+    )
+    kds.assign_concrete_section(ConcreteSection(geom))
+    return kds
+
+
 def build() -> dict:
     """격자 전체를 계산해 하나의 사전으로 만든다."""
     data = {
         "columns": {"fck": COL_FCK, "fy": COL_FY, "types": COL_TYPES, "cases": {}},
         "beams": {"fck": BEAM_FCK, "fy": BEAM_FY, "nbar": BEAM_NBAR, "cases": {}},
         "tees": {"fck": TEE_FCK, "hf": TEE_HF, "nbar": TEE_NBAR, "cases": {}},
+        "para": {"fck": COL_FCK, "fy": PARA_FY, "cases": {}},
+        "depths": {"d": BEAM_D, "cases": {}},
     }
 
     total = len(COL_FCK) * len(COL_FY) * len(COL_TYPES)
@@ -274,6 +357,22 @@ def build() -> dict:
                 key = f"{fck}|400|{h_f}|{n}"
                 data["tees"]["cases"][key] = tee_case(fck, 400, h_f, n)
     print("  T형보 완료", flush=True)
+
+    for fck in COL_FCK:
+        for fy in PARA_FY:
+            data["para"]["cases"][f"{fck}|{fy}"] = parabolic_case(fck, fy)
+    print("  포물선 대조 완료", flush=True)
+
+    total = len(BEAM_FCK) * len(BEAM_FY) * len(BEAM_NBAR) * len(BEAM_D)
+    done = 0
+    for fck in BEAM_FCK:
+        for fy in BEAM_FY:
+            for n in BEAM_NBAR:
+                for d in BEAM_D:
+                    key = f"{fck}|{fy}|{n}|{d}"
+                    data["depths"]["cases"][key] = depth_case(fck, fy, n, d)
+                    done += 1
+        print(f"  깊이 {done}/{total}", flush=True)
 
     return data
 

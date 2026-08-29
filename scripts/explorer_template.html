@@ -262,6 +262,8 @@
   .chip.state .v { font-family: var(--sans); font-size: 14px; font-weight: 600; }
 
   .plots { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; }
+  .plots .card.wide { grid-column: 1 / -1; }
+  @media (min-width: 1250px) { .plots .card.wide { grid-column: span 2; } }
 
   .card { padding: 16px 18px 12px; }
   .card h3 { margin-bottom: 2px; }
@@ -298,14 +300,88 @@
     <span class="sub">값을 움직이면 그래프가 따라 바뀐다 · KDS 14 20 강도설계법</span>
   </div>
   <div class="tabs" role="tablist">
-    <button role="tab" id="tab-col" aria-selected="true" aria-controls="panel-col">기둥 — φ와 P-M 상관도</button>
-    <button role="tab" id="tab-beam" aria-selected="false" aria-controls="panel-beam">보 — 무엇을 올려야 하나</button>
+    <button role="tab" id="tab-block" aria-selected="true" aria-controls="panel-block">L1 · 등가응력블록</button>
+    <button role="tab" id="tab-col" aria-selected="false" aria-controls="panel-col">L2 · 강도감소계수 φ</button>
+    <button role="tab" id="tab-beam" aria-selected="false" aria-controls="panel-beam">L3 · 설계 파라미터</button>
   </div>
 </header>
 
 <main>
+  <!-- ── L1 · 등가응력블록 ────────────────────────────────── -->
+  <section id="panel-block" role="tabpanel" aria-labelledby="tab-block">
+    <div class="layout">
+      <div class="rail">
+        <h2>비교 조건</h2>
+        <p class="sub" style="margin:2px 0 0;font-size:12.5px">KDS 14 20 20 4.1.1(7) 포물선-직선 · 4.1.1(8) 등가블록</p>
+
+        <div class="control">
+          <div class="control-head"><label for="k-fck">콘크리트 강도 f<sub>ck</sub></label><output id="k-fck-out"></output></div>
+          <input type="range" id="k-fck" min="0" max="0" step="1">
+          <div class="ticks"><span id="k-fck-lo"></span><span id="k-fck-hi"></span></div>
+        </div>
+
+        <div class="control">
+          <div class="control-head"><label for="k-fy">철근 항복강도 f<sub>y</sub></label><output id="k-fy-out"></output></div>
+          <input type="range" id="k-fy" min="0" max="0" step="1">
+          <div class="ticks"><span id="k-fy-lo"></span><span id="k-fy-hi"></span></div>
+        </div>
+
+        <div class="control">
+          <div class="control-head"><label for="k-c">중립축 깊이 c</label><output id="k-c-out"></output></div>
+          <input type="range" id="k-c" min="40" max="260" step="5" value="100">
+          <div class="ticks"><span>40 mm</span><span>260 mm</span></div>
+        </div>
+
+        <div class="note">
+          <strong>등가블록이 성립하는 이유.</strong> 직사각형으로 바꿔치기해도 되려면
+          응력분포의 <em>면적</em>(합력)과 <em>도심</em>(작용 위치) 두 가지만 같으면
+          된다. 모양이 다른 것은 힘·모멘트 평형에 들어오지 않는다. η와 β<sub>1</sub>은
+          그렇게 맞춘 결과이지 임의의 숫자가 아니다.
+        </div>
+      </div>
+
+      <div>
+        <div class="chips" id="k-chips"></div>
+        <div class="plots">
+          <div class="card wide">
+            <h3>단면과 압축응력</h3>
+            <p class="cap">왼쪽이 400 × 600 단철근 보의 단면, 오른쪽이 압축부를 확대한 응력분포다. 압축연단이 위쪽이며 두 그림의 높이가 서로 맞는다. 점선이 각 분포의 합력 작용 위치다.</p>
+            <svg id="k-dist" viewBox="0 0 720 340" role="img" aria-label="단면과 두 응력분포"></svg>
+            <div class="legend">
+              <span><i style="background:var(--accent)"></i>포물선-직선 4.1.1(7)</span>
+              <span><i style="background:var(--comp)"></i>등가블록 4.1.1(8)</span>
+            </div>
+          </div>
+          <div class="card">
+            <h3>강도에 따른 계수</h3>
+            <p class="cap">표 4.1-1 의 α·β 와 표 4.1-2 의 η·β<sub>1</sub>. 합력비 ηβ<sub>1</sub>/α 와 위치비 (β<sub>1</sub>/2)/β 가 1 이면 두 분포가 등가다.</p>
+            <svg id="k-coef" viewBox="0 0 460 300" role="img" aria-label="강도에 따른 응력블록 계수"></svg>
+            <div class="legend">
+              <span><i style="background:var(--accent)"></i>합력비 ηβ₁/α</span>
+              <span><i style="background:var(--tens)"></i>위치비 (β₁/2)/β</span>
+            </div>
+          </div>
+          <div class="card">
+            <h3>축력이 커지면 갈라진다</h3>
+            <p class="cap">같은 축력에서 두 관계로 구한 공칭 휨강도. 500 × 500 띠철근 기둥, 8-D22.</p>
+            <svg id="k-pm" viewBox="0 0 460 300" role="img" aria-label="두 관계로 구한 P-M 상관도"></svg>
+            <div class="legend">
+              <span><i style="background:var(--comp)"></i>등가블록</span>
+              <span><i style="background:var(--accent)"></i>포물선-직선</span>
+            </div>
+          </div>
+          <div class="card">
+            <h3>블록이 강도를 과대평가하는 정도</h3>
+            <p class="cap">아래로 내려갈수록 등가블록이 비보수측이다. 그 영역은 φ가 0.65 로 가장 낮고 최대 축강도 상한도 걸린다.</p>
+            <svg id="k-diff" viewBox="0 0 460 300" role="img" aria-label="축력에 따른 두 관계의 차이"></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ── 기둥 ─────────────────────────────────────────────── -->
-  <section id="panel-col" role="tabpanel" aria-labelledby="tab-col">
+  <section id="panel-col" role="tabpanel" aria-labelledby="tab-col" class="hidden">
     <div class="layout">
       <div class="rail">
         <h2>단면 조건</h2>
@@ -395,6 +471,12 @@
           <div class="ticks"><span id="b-n-lo"></span><span id="b-n-hi"></span></div>
         </div>
 
+        <div class="control">
+          <div class="control-head"><label for="b-d">단면 깊이 h</label><output id="b-d-out"></output></div>
+          <input type="range" id="b-d" min="0" max="0" step="1">
+          <div class="ticks"><span id="b-d-lo"></span><span id="b-d-hi"></span></div>
+        </div>
+
         <div class="note">
           <strong>설계의 갈림길.</strong> 강도가 모자랄 때 무엇을 올릴 것인가. f<sub>ck</sub>를
           올리면 휨강도는 거의 오르지 않지만 균열모멘트와 강성은 눈에 띄게 오른다. 철근을
@@ -438,6 +520,16 @@
               <span><i style="background:var(--accent)"></i>섬유해석</span>
               <span><i style="background:var(--comp)"></i>손계산</span>
             </div>
+          </div>
+          <div class="card">
+            <h3>단면을 키우면</h3>
+            <p class="cap">가로축은 단면 깊이 h. 깊이는 지렛대 팔에 직접 곱해지고 ε<sub>t</sub>도 함께 키운다.</p>
+            <svg id="b-depth" viewBox="0 0 460 290" role="img" aria-label="단면 깊이에 따른 설계휨강도"></svg>
+          </div>
+          <div class="card">
+            <h3>무엇을 올릴 것인가</h3>
+            <p class="cap">각 변수를 20 % 올렸을 때 φM<sub>n</sub>이 몇 % 오르는지. 1.0 이면 올린 만큼 그대로 오른다는 뜻이다.</p>
+            <svg id="b-sens" viewBox="0 0 460 290" role="img" aria-label="설계 변수의 민감도 비교"></svg>
           </div>
         </div>
       </div>
@@ -535,6 +627,7 @@ const CSSVAR = n => getComputedStyle(document.documentElement).getPropertyValue(
 const RANGE = (() => {
   const cols = Object.values(DATA.columns.cases);
   const beams = Object.values(DATA.beams.cases);
+  const paras = Object.values(DATA.para.cases);
   const nb = DATA.beams.nbar, fckList = DATA.beams.fck;
 
   const max = (arr, f) => arr.reduce((m, v) => Math.max(m, f(v)), -Infinity);
@@ -570,6 +663,19 @@ const RANGE = (() => {
     nbarHi: nb[nb.length - 1],
     fckLo: fckList[0],
     fckHi: fckList[fckList.length - 1],
+
+    // L1 — 응력분포와 두 관계의 대조
+    fckTop: Math.max(...DATA.para.fck),
+    cTop: 280,
+    paraM: max(paras, c => max(c.pts, q => Math.max(q[1], q[2]))) * 1.06,
+    paraN: max(paras, c => max(c.pts, q => q[0])) * 1.05,
+    paraDiff: min(paras, c => min(c.pts, q => (q[2] / q[1] - 1) * 100)) * 1.15,
+
+    // L3 — 단면 깊이
+    depthLo: DATA.depths.d[0],
+    depthHi: DATA.depths.d[DATA.depths.d.length - 1],
+    depthM: max(Object.values(DATA.depths.cases), c => c.phiMn) * 1.06,
+    sensTop: 1.6,
   };
 })();
 
@@ -596,7 +702,9 @@ function stateChip(k, cls) {
 }
 
 /* ── 탭 ──────────────────────────────────────────────────── */
-const PANELS = { "tab-col": "panel-col", "tab-beam": "panel-beam" };
+const PANELS = { "tab-block": "panel-block", "tab-col": "panel-col", "tab-beam": "panel-beam" };
+const redrawAll = () => { drawBlock(); drawColumn(); drawBeam(); };
+
 document.querySelectorAll('[role="tab"]').forEach(btn => {
   btn.addEventListener("click", () => {
     for (const id in PANELS) {
@@ -604,9 +712,225 @@ document.querySelectorAll('[role="tab"]').forEach(btn => {
       document.getElementById(id).setAttribute("aria-selected", on);
       document.getElementById(PANELS[id]).classList.toggle("hidden", !on);
     }
-    drawColumn(); drawBeam();
+    redrawAll();
   });
 });
+
+/* ── 탭 1 · 등가응력블록 (L1) ────────────────────────────── */
+const P = DATA.para;
+
+// KDS 14 20 20 표 4.1-1 (포물선-직선) 과 표 4.1-2 (등가블록)
+const T_FCK = [40, 50, 60, 70, 80, 90];
+const T_N = [2.00, 1.92, 1.50, 1.29, 1.22, 1.20];
+const T_ECO = [0.0020, 0.0021, 0.0022, 0.0023, 0.0024, 0.0025];
+const T_ECU = [0.0033, 0.0032, 0.0031, 0.0030, 0.0029, 0.0028];
+const T_ALPHA = [0.80, 0.78, 0.72, 0.67, 0.63, 0.59];
+const T_BETA = [0.40, 0.40, 0.38, 0.37, 0.36, 0.35];
+const T_ETA = [1.00, 0.97, 0.95, 0.91, 0.87, 0.84];
+const T_B1 = [0.80, 0.80, 0.76, 0.74, 0.72, 0.70];
+
+/** 표를 선형보간한다. 40 MPa 이하는 첫 열 값이 그대로 쓰인다. */
+function lerpTable(fck, ys) {
+  const x = Math.max(fck, T_FCK[0]);
+  for (let i = 0; i < T_FCK.length - 1; i++) {
+    if (x <= T_FCK[i + 1]) {
+      const t = (x - T_FCK[i]) / (T_FCK[i + 1] - T_FCK[i]);
+      return ys[i] + (ys[i + 1] - ys[i]) * t;
+    }
+  }
+  return ys[ys.length - 1];
+}
+
+const paraParams = fck => ({
+  n: Math.min(2.0, 1.2 + 1.5 * Math.pow((100 - fck) / 60, 4)),
+  epsCo: Math.max(0.002, 0.002 + (fck - 40) / 100000),
+  epsCu: Math.min(0.0033, 0.0033 - (fck - 40) / 100000),
+  alpha: lerpTable(fck, T_ALPHA),
+  beta: lerpTable(fck, T_BETA),
+});
+
+const blockParams = fck => ({
+  epsCu: lerpTable(fck, T_ECU),
+  eta: lerpTable(fck, T_ETA),
+  beta1: lerpTable(fck, T_B1),
+});
+
+/** KDS 식 (4.1-1), (4.1-2) */
+function paraStress(fck, eps) {
+  const { n, epsCo } = paraParams(fck);
+  if (eps <= 0) return 0;
+  if (eps >= epsCo) return 0.85 * fck;
+  return 0.85 * fck * (1 - Math.pow(1 - eps / epsCo, n));
+}
+
+const kFck = bindRange("k-fck", P.fck, v => v + " MPa", () => drawBlock());
+const kFy = bindRange("k-fy", P.fy, v => "SD" + v, () => drawBlock());
+const kC = document.getElementById("k-c");
+kC.addEventListener("input", () => drawBlock());
+
+function drawBlock() {
+  if (document.getElementById("panel-block").classList.contains("hidden")) return;
+  const fck = kFck.get(), fy = kFy.get(), c = +kC.value;
+  const pp = paraParams(fck), bp = blockParams(fck);
+  const a = bp.beta1 * c;
+  const fcMax = 0.85 * fck;
+
+  document.getElementById("k-c-out").textContent = c + " mm";
+
+  const forceRatio = bp.eta * bp.beta1 / pp.alpha;
+  const posRatio = (bp.beta1 / 2) / pp.beta;
+
+  document.getElementById("k-chips").innerHTML =
+    chip("n (곡선 지수)", pp.n.toFixed(2)) +
+    chip("ε_co", pp.epsCo.toFixed(4)) +
+    chip("ε_cu", pp.epsCu.toFixed(4)) +
+    chip("α · β", `${pp.alpha.toFixed(2)} · ${pp.beta.toFixed(2)}`) +
+    chip("η · β₁", `${bp.eta.toFixed(2)} · ${bp.beta1.toFixed(2)}`) +
+    chip("합력비 ηβ₁/α", forceRatio.toFixed(3)) +
+    chip("위치비 (β₁/2)/β", posRatio.toFixed(3)) +
+    chip("압축블록 a", a.toFixed(0), "mm");
+
+  /* 단면과 압축응력 */
+  {
+    const svg = document.getElementById("k-dist");
+    svg.textContent = "";
+
+    const H = 600, Bw = 400, COVER = 50, NBAR = 4;
+    const yNa = H - c;
+
+    // 왼쪽: 단면 (전체 높이) / 오른쪽: 압축부 확대
+    const top = 26, bot = 302, hpx = bot - top;
+    const secX = 62, secW = 116;
+    const zx0 = 320, zx1 = 610;
+
+    const SY = h => bot - h / H * hpx;                       // 단면용 세로 좌표
+    const zLo = yNa - c * 0.12, zHi = H + c * 0.08;          // 확대 구간
+    const ZY = h => bot - (h - zLo) / (zHi - zLo) * hpx;
+    const fMax = 0.85 * RANGE.fckTop;
+    const ZX = f => zx0 + f / fMax * (zx1 - zx0);
+
+    const g = el("g", {});
+    const put = n => { g.appendChild(n); return n; };
+
+    // ── 단면 ──
+    put(el("rect", { x: secX, y: SY(H), width: secW, height: hpx,
+                     fill: "none", stroke: CSSVAR("--ink"), "stroke-width": 1.6 }));
+    put(el("rect", { x: secX, y: SY(H), width: secW, height: SY(yNa) - SY(H),
+                     fill: CSSVAR("--accent"), opacity: 0.18 }));
+    for (let i = 0; i < NBAR; i++) {
+      const x = secX + 16 + i * (secW - 32) / (NBAR - 1);
+      put(el("circle", { cx: x, cy: SY(COVER + 11), r: 4.2, fill: CSSVAR("--ink") }));
+    }
+    put(el("line", { x1: secX - 6, x2: secX + secW + 6, y1: SY(yNa), y2: SY(yNa),
+                     stroke: CSSVAR("--comp"), "stroke-width": 1.4, "stroke-dasharray": "5 3" }));
+    put(el("text", { x: secX + secW / 2, y: SY(yNa) - 5, "text-anchor": "middle", fill: CSSVAR("--comp") },
+                    `c = ${c} mm`));
+    put(el("text", { x: secX + secW / 2, y: bot + 16, "text-anchor": "middle" }, "400 × 600"));
+    put(el("text", { x: secX + secW / 2, y: SY(H) - 7, "text-anchor": "middle", fill: CSSVAR("--faint") },
+                    "압축연단"));
+
+    // 확대 구간을 잇는 안내선
+    for (const h of [zHi, zLo]) {
+      put(el("line", { x1: secX + secW, x2: zx0, y1: SY(Math.min(h, H)), y2: ZY(h),
+                       stroke: CSSVAR("--faint"), "stroke-width": 0.8, "stroke-dasharray": "2 3" }));
+    }
+
+    // ── 확대한 압축응력 ──
+    put(el("line", { x1: zx0, x2: zx1 + 8, y1: ZY(zLo), y2: ZY(zLo), stroke: CSSVAR("--line") }));
+    put(el("line", { x1: zx0, x2: zx0, y1: ZY(zHi), y2: ZY(zLo), stroke: CSSVAR("--line") }));
+    for (const f of [0, 10, 20, 30, 40, 50, 60].filter(v => v <= fMax)) {
+      put(el("line", { x1: ZX(f), x2: ZX(f), y1: ZY(zHi), y2: ZY(zLo),
+                       stroke: CSSVAR("--line-soft") }));
+      put(el("text", { x: ZX(f), y: ZY(zLo) + 14, "text-anchor": "middle", class: "num" }, f));
+    }
+    put(el("text", { x: (zx0 + zx1) / 2, y: bot + 30, "text-anchor": "middle" }, "압축응력 (MPa)"));
+
+    const curve = [];
+    for (let i = 0; i <= 120; i++) {
+      const h = yNa + c * i / 120;
+      curve.push([ZX(paraStress(fck, pp.epsCu * (h - yNa) / c)), ZY(h)]);
+    }
+    put(el("polygon", { points: [[ZX(0), ZY(yNa)], ...curve, [ZX(0), ZY(H)]].map(q => q.join(",")).join(" "),
+                        fill: CSSVAR("--accent"), opacity: 0.16 }));
+    put(path(curve, { stroke: CSSVAR("--accent"), "stroke-width": 2.4 }));
+
+    put(path([[ZX(0), ZY(H - a)], [ZX(bp.eta * fcMax), ZY(H - a)],
+              [ZX(bp.eta * fcMax), ZY(H)], [ZX(0), ZY(H)]],
+             { stroke: CSSVAR("--comp"), "stroke-width": 2, "stroke-dasharray": "7 4" }));
+
+    put(el("line", { x1: zx0, x2: zx1, y1: ZY(yNa), y2: ZY(yNa),
+                     stroke: CSSVAR("--comp"), "stroke-width": 1, "stroke-dasharray": "4 3" }));
+    put(el("text", { x: zx1, y: ZY(yNa) - 5, "text-anchor": "end", fill: CSSVAR("--comp") }, "중립축"));
+
+    for (const [h, col, lab, dy] of [
+      [H - pp.beta * c, "--accent", `βc = ${(pp.beta * c).toFixed(1)}`, -4],
+      [H - a / 2, "--comp", `a/2 = ${(a / 2).toFixed(1)}`, 12],
+    ]) {
+      put(el("line", { x1: ZX(0), x2: zx1 + 4, y1: ZY(h), y2: ZY(h),
+                       stroke: CSSVAR(col), "stroke-width": 1, "stroke-dasharray": "2 3" }));
+      put(el("text", { x: zx1 + 8, y: ZY(h) + dy, fill: CSSVAR(col) }, lab));
+    }
+
+    svg.appendChild(g);
+  }
+
+  /* 계수 비교 */
+  {
+    const svg = document.getElementById("k-coef");
+    const f = frame(svg, { x0: 21, x1: 90, y0: 0.9, y1: 1.1,
+                           xlabel: "콘크리트 강도 f_ck (MPa)", ylabel: "비",
+                           fx: t => t.toFixed(0), fy: t => t.toFixed(2) });
+    f.add(el("line", { x1: f.m.l, x2: f.m.l + f.w, y1: f.Y(1), y2: f.Y(1),
+                       stroke: CSSVAR("--faint"), "stroke-width": 1, "stroke-dasharray": "2 4" }));
+
+    const xs = [];
+    for (let v = 21; v <= 90; v += 1) xs.push(v);
+    for (const [fn, col] of [
+      [v => blockParams(v).eta * blockParams(v).beta1 / paraParams(v).alpha, "--accent"],
+      [v => (blockParams(v).beta1 / 2) / paraParams(v).beta, "--tens"],
+    ]) {
+      f.add(path(xs.map(v => [f.X(v), f.Y(fn(v))]), { stroke: CSSVAR(col), "stroke-width": 2.2 }));
+      f.add(el("circle", { cx: f.X(fck), cy: f.Y(fn(fck)), r: 5,
+                           fill: CSSVAR(col), stroke: CSSVAR("--surface"), "stroke-width": 2 }));
+    }
+  }
+
+  const pc = P.cases[`${fck}|${fy}`];
+  if (!pc) return;
+
+  /* 두 관계의 상관도 */
+  {
+    const svg = document.getElementById("k-pm");
+    const f = frame(svg, { x0: 0, x1: RANGE.paraM, y0: 0, y1: RANGE.paraN,
+                           xlabel: "공칭 휨강도 Mn (kN·m)", ylabel: "축력 Nd (kN)",
+                           margin: { l: 58 }, fx: t => t.toFixed(0), fy: t => t.toFixed(0) });
+    f.add(path(pc.pts.map(q => [f.X(q[1]), f.Y(q[0])]), { stroke: CSSVAR("--comp"), "stroke-width": 2.2 }));
+    f.add(path(pc.pts.map(q => [f.X(q[2]), f.Y(q[0])]), { stroke: CSSVAR("--accent"), "stroke-width": 2.2, "stroke-dasharray": "6 4" }));
+    for (const q of pc.pts) {
+      f.add(el("circle", { cx: f.X(q[1]), cy: f.Y(q[0]), r: 3, fill: CSSVAR("--comp") }));
+      f.add(el("circle", { cx: f.X(q[2]), cy: f.Y(q[0]), r: 3, fill: CSSVAR("--accent") }));
+    }
+  }
+
+  /* 차이 */
+  {
+    const svg = document.getElementById("k-diff");
+    const f = frame(svg, { x0: 0, x1: RANGE.paraN, y0: RANGE.paraDiff, y1: 1,
+                           xlabel: "축력 Nd (kN)", ylabel: "포물선 대비 블록의 차이 (%)",
+                           margin: { l: 58 }, fx: t => t.toFixed(0), fy: t => t.toFixed(0) });
+    f.add(el("line", { x1: f.m.l, x2: f.m.l + f.w, y1: f.Y(0), y2: f.Y(0),
+                       stroke: CSSVAR("--faint"), "stroke-width": 1 }));
+    const pts = pc.pts.map(q => [f.X(q[0]), f.Y((q[2] / q[1] - 1) * 100)]);
+    f.add(el("polygon", { points: [[pts[0][0], f.Y(0)], ...pts, [pts[pts.length - 1][0], f.Y(0)]]
+                            .map(q => q.join(",")).join(" "),
+                          fill: CSSVAR("--comp"), opacity: 0.14 }));
+    f.add(path(pts, { stroke: CSSVAR("--accent"), "stroke-width": 2.4 }));
+    for (const q of pts) f.add(el("circle", { cx: q[0], cy: q[1], r: 3, fill: CSSVAR("--accent") }));
+    const worst = Math.min(...pc.pts.map(q => (q[2] / q[1] - 1) * 100));
+    f.add(el("text", { x: f.m.l + 8, y: f.m.t + 16, fill: CSSVAR("--comp") },
+                      `이 조건의 최대 과대평가 ${(-worst).toFixed(1)} %`));
+  }
+}
 
 /* ── 탭 1 · 기둥 ─────────────────────────────────────────── */
 const C = DATA.columns;
@@ -730,14 +1054,18 @@ const B = DATA.beams;
 const bFck = bindRange("b-fck", B.fck, v => v + " MPa", () => drawBeam());
 const bFy = bindRange("b-fy", B.fy, v => "SD" + v, () => drawBeam());
 const bN = bindRange("b-n", B.nbar, v => v + "-D22", () => drawBeam());
+const bD = bindRange("b-d", DATA.depths.d, v => v + " mm", () => drawBeam());
+
+const depthCase = (fck, fy, n, d) => DATA.depths.cases[`${fck}|${fy}|${n}|${d}`];
 
 const beamCase = (fck, fy, n) => B.cases[`${fck}|${fy}|${n}`];
 
 function drawBeam() {
   if (document.getElementById("panel-beam").classList.contains("hidden")) return;
-  const fck = bFck.get(), fy = bFy.get(), n = bN.get();
+  const fck = bFck.get(), fy = bFy.get(), n = bN.get(), dh = bD.get();
   const c = beamCase(fck, fy, n);
-  if (!c) return;
+  const cd = depthCase(fck, fy, n, dh);
+  if (!c || !cd) return;
 
   const epsY = fy / 200000;
   const epsTl = Math.max(0.005, 2.5 * epsY);
@@ -838,15 +1166,75 @@ function drawBeam() {
     f.add(el("text", { x: f.m.l + 8, y: f.m.t + 16, fill: CSSVAR("--muted") },
                       `최대 차이 ${diff < 0.05 ? "0.0" : diff.toFixed(1)} % — 같은 응력블록을 쓰기 때문이다`));
   }
+
+  /* 단면 깊이 */
+  {
+    const svg = document.getElementById("b-depth");
+    const series = DATA.depths.d.map(k => [k, depthCase(fck, fy, n, k)]).filter(([, v]) => v);
+    const f = frame(svg, { x0: RANGE.depthLo, x1: RANGE.depthHi, y0: 0, y1: RANGE.depthM,
+                           xlabel: "단면 깊이 h (mm)", ylabel: "설계휨강도 φM_n (kN·m)",
+                           fx: t => t.toFixed(0), fy: t => t.toFixed(0) });
+    f.add(path(series.map(([k, v]) => [f.X(k), f.Y(v.phiMn)]), { stroke: CSSVAR("--accent"), "stroke-width": 2.4 }));
+    for (const [k, v] of series) {
+      f.add(el("circle", { cx: f.X(k), cy: f.Y(v.phiMn), r: k === dh ? 6 : 3.2,
+                           fill: CSSVAR(CLS_COLOR[v.cls]),
+                           stroke: k === dh ? CSSVAR("--surface") : "none", "stroke-width": 2 }));
+    }
+  }
+
+  /* 민감도 — 각 변수를 20 % 올렸을 때 */
+  {
+    const svg = document.getElementById("b-sens");
+    const base = cd;
+    const near = (list, v) => list.reduce((a, b) => Math.abs(b - v) < Math.abs(a - v) ? b : a);
+
+    const bars = [
+      ["f_ck", depthCase(near(B.fck, fck * 1.2), fy, n, dh), fck * 1.2 / fck - 1],
+      ["f_y", depthCase(fck, near(B.fy, fy * 1.2), n, dh), near(B.fy, fy * 1.2) / fy - 1],
+      ["A_s", depthCase(fck, fy, near(B.nbar, n * 1.2), dh), near(B.nbar, n * 1.2) / n - 1],
+      ["h", depthCase(fck, fy, n, near(DATA.depths.d, dh * 1.2)), near(DATA.depths.d, dh * 1.2) / dh - 1],
+      // 격자 끝에서는 20 % 올린 값이 없다. 0 으로 그리면 "안 듣는다"로 오해되므로
+      // 값이 없음을 따로 표시한다.
+    ].map(([lab, v, ratio]) => [lab, (v && ratio > 0.02) ? (v.phiMn / base.phiMn - 1) / ratio : null]);
+
+    const f = frame(svg, { x0: 0, x1: 4, y0: 0, y1: RANGE.sensTop,
+                           xlabel: "", ylabel: "투입 대비 강도 증가 (탄성도)",
+                           fx: () => "", fy: t => t.toFixed(1) });
+    f.add(el("line", { x1: f.m.l, x2: f.m.l + f.w, y1: f.Y(1), y2: f.Y(1),
+                       stroke: CSSVAR("--faint"), "stroke-width": 1, "stroke-dasharray": "3 4" }));
+
+    const bw = f.w / 4 * 0.52;
+    bars.forEach(([lab, val], i) => {
+      const cx = f.X(i + 0.5);
+      if (val === null) {
+        f.add(el("rect", { x: cx - bw / 2, y: f.Y(0) - 4, width: bw, height: 4,
+                           fill: CSSVAR("--faint"), opacity: 0.4, rx: 2 }));
+        f.add(el("text", { x: cx, y: f.Y(0) - 12, "text-anchor": "middle", fill: CSSVAR("--faint") },
+                          "격자 밖"));
+        f.g.appendChild(el("text", { x: cx, y: f.Y(0) + 17, "text-anchor": "middle" }, lab));
+        return;
+      }
+      const y = f.Y(Math.max(0, Math.min(val, RANGE.sensTop)));
+      const col = val >= 0.9 ? "--tens" : val >= 0.3 ? "--tran" : "--comp";
+      f.add(el("rect", { x: cx - bw / 2, y, width: bw, height: Math.max(0, f.Y(0) - y),
+                         fill: CSSVAR(col), rx: 3 }));
+      f.add(el("text", { x: cx, y: y - 6, "text-anchor": "middle", class: "num", fill: CSSVAR(col) },
+                        val.toFixed(2)));
+      // 축 아래에 놓이는 글자는 잘림 영역 밖이라 클리핑되지 않은 쪽에 붙인다
+      f.g.appendChild(el("text", { x: cx, y: f.Y(0) + 17, "text-anchor": "middle" }, lab));
+    });
+  }
 }
 
 /* ── 시작 ────────────────────────────────────────────────── */
+kFck.set(27); kFy.set(400); kFck.sync(); kFy.sync();
 cFck.set(27); cFy.set(400); cFck.sync(); cFy.sync();
-bFck.set(27); bFy.set(400); bN.set(4); bFck.sync(); bFy.sync(); bN.sync();
-drawColumn(); drawBeam();
+bFck.set(27); bFy.set(400); bN.set(4); bD.set(600);
+bFck.sync(); bFy.sync(); bN.sync(); bD.sync();
+redrawAll();
 
 const mq = window.matchMedia("(prefers-color-scheme: dark)");
-mq.addEventListener("change", () => { drawColumn(); drawBeam(); });
-new MutationObserver(() => { drawColumn(); drawBeam(); })
+mq.addEventListener("change", redrawAll);
+new MutationObserver(redrawAll)
   .observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 </script>
