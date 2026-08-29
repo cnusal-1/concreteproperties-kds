@@ -223,6 +223,13 @@
     color: var(--muted);
   }
 
+  /* 안내 상자 안의 가정값 표 — 좁은 사이드바에 맞춰 한 열로 쌓는다 */
+  table.assume { width: 100%; border-collapse: collapse; margin: 8px 0;
+    font-size: 11.5px; }
+  table.assume td { padding: 3px 0 0; color: var(--ink); }
+  table.assume td.ref { padding: 0 0 5px; font-size: 10.5px;
+    color: var(--muted); border-bottom: 1px solid var(--line-soft); }
+
   /* L7 처럼 다른 탭의 값을 가져다 쓰는 패널의 안내 상자 */
   .note-link { margin: 14px 0 0; padding: 10px 12px; border-radius: 4px;
     background: var(--tens-fill); border-left: 2px solid var(--tens);
@@ -555,6 +562,17 @@
           연속판 1 m 폭, SD400. KDS 24 10 11 4.6.2 는 바닥판 콘크리트를
           <b>27 MPa 이상</b>으로 정한다 — 기본값이 그것이다.
         </p>
+        <div class="note-link">
+          <b>해석적(전통적) 설계법이다</b><br>
+          하중을 구해 휨모멘트를 계산하고 그에 맞는 철근량을 푸는 방식이다
+          (KDS 24 10 11 4.6.2 + 24 14 21 4.6.5.1).<br><br>
+          기준은 <b>경험적 설계법</b>(24 14 21 4.6.5.2)도 허용한다. 그쪽은
+          계산 없이 상·하면 각 방향에 <b>0.3 % 이상</b>의 철근을 4층으로
+          배치하는 것으로 끝난다 — 대신 두께 240 mm 이상, 거더 간격 4.5 m
+          이하 등 <b>적용 조건</b>을 모두 만족해야 한다.<br><br>
+          조건만 맞으면 경험적 설계법이 대개 철근이 적다. 이 탭은 조건을
+          벗어난 경우까지 다루려고 해석적 설계법을 쓴다.
+        </div>
 
         <div class="control">
           <div class="control-head"><label for="d-span">거더 중심 간격</label><output id="d-span-out"></output></div>
@@ -778,6 +796,33 @@
           편심 슬라이더는 <b>기하 한계</b>(하부 연단에서 200 mm 위)를 100 으로 둔 비율이다.
           단면 성질·손실·응력은 모두 닫힌 형태로 풀므로 격자 보간이 없다.
         </p>
+
+        <div class="note-link">
+          <b>손실은 가정이 아니라 계산한다</b><br>
+          다만 계산에 넣는 <b>재료·시공 조건은 가정</b>이다. 값을 바꾸려면
+          파이썬 <code>design_girder</code> 의 같은 이름 인자를 쓴다.
+          <table class="assume">
+            <tr><td>곡률마찰 μ = 0.19</td></tr>
+            <tr><td class="ref">표 1.5-2, 강연선 + 비윤활 강재덕트</td></tr>
+            <tr><td>파상마찰 k = 0.004 /m</td></tr>
+            <tr><td class="ref">1.5.7.4(2)②다 의 범위 0.001 ~ 0.007</td></tr>
+            <tr><td>곡률각 θ = 0.12 rad</td></tr>
+            <tr><td class="ref">포물선 드레이프를 가정한 반지간 값</td></tr>
+            <tr><td>정착 활동량 = 6 mm</td></tr>
+            <tr><td class="ref">쐐기 정착의 통상값</td></tr>
+            <tr><td>텐던 개수 = 4</td></tr>
+            <tr><td class="ref">탄성변형 식 (1.5-10) 의 순차 긴장</td></tr>
+            <tr><td>릴랙세이션 2종 (저릴랙세이션)</td></tr>
+            <tr><td class="ref">3.3.2(7)③ — ρ<sub>1000</sub> 2.5 %</td></tr>
+            <tr><td>크리프계수 φ = 2.0</td></tr>
+            <tr><td>건조수축 ε<sub>sh</sub> = 300×10⁻⁶</td></tr>
+            <tr><td class="ref">둘 다 장기손실 식 (1.5-12) 에 들어간다</td></tr>
+            <tr><td>긴장 시 f<sub>ck</sub>(t) = 30 MPa</td></tr>
+            <tr><td class="ref">탄성변형과 압축 한계 식 (1.5-8) 에 쓴다</td></tr>
+          </table>
+          <b>마찰과 정착</b>은 배치가 정하므로 설계자가 줄일 수 있고,
+          <b>크리프·건조수축·릴랙세이션</b>은 재료와 환경이 정한다.
+        </div>
       </div>
 
       <div>
@@ -789,9 +834,9 @@
             <svg id="g-sec-svg" viewBox="0 0 460 300" role="img" aria-label="PSC 거더 합성 단면"></svg>
           </div>
           <div class="card">
-            <h3>프리스트레스 손실</h3>
-            <p class="cap">긴장한 응력에서 무엇이 얼마나 빠지는지. 마찰은 지간이 길수록 커진다.</p>
-            <svg id="g-loss" viewBox="0 0 460 300" role="img" aria-label="프리스트레스 손실 폭포"></svg>
+            <h3>프리스트레스 손실 — 계산 결과</h3>
+            <p class="cap">각 손실 아래의 %는 <b>긴장응력에 대한 비율</b>이다. 마찰은 지간이 길수록 커진다.</p>
+            <svg id="g-loss" viewBox="0 0 460 330" role="img" aria-label="프리스트레스 손실 폭포"></svg>
           </div>
           <div class="card wide">
             <h3>단면 응력 — 긴장 직후와 사용 시</h3>
@@ -1688,6 +1733,13 @@ const DECK = {
   maxSpc: [300, 250, 200, 150, 100, 50],
 };
 
+/**
+ * 공칭피복두께 (mm) — 식 (4.4-1), 표 4.4-4.
+ * 내구성 최소피복과 철근 지름 중 큰 값에 시공 편차 10 mm 를 더한다.
+ */
+const deckCover = (exposure, dia) =>
+  Math.max(dia, DECK.cover[exposure], 10) + 10;
+
 /** 설계압축강도 f_cd = phi_c x 0.85 x f_ck (식 3.1-47) */
 const deckFcd = fck => DECK.phiC * 0.85 * fck;
 
@@ -1712,8 +1764,7 @@ function deckSolve(o) {
   const fcd = deckFcd(fck);
   const blk = deckBlock(fck);
   const alpha = blk.alpha, beta = blk.beta;
-  const tcMin = Math.max(o.dia, DECK.cover[o.exposure], 10);
-  const cover = tcMin + 10;                           // + 설계 편차 허용량
+  const cover = deckCover(o.exposure, o.dia);
   const d = o.t - cover - o.dia / 2;
 
   const wDC = DECK.gDC * o.t / 1000;                  // kN/m²
@@ -1772,6 +1823,9 @@ function bindRange2(id, fmt, onChange) {
   const out = document.getElementById(id + "-out");
   const sync = () => { out.textContent = fmt(+input.value); onChange(); };
   input.addEventListener("input", sync);
+  // 초기 표시는 여기서 직접 넣는다. '시작' 블록에서 일일이 sync() 를 부르면
+  // 슬라이더를 새로 추가할 때마다 빠뜨리기 쉽다.
+  out.textContent = fmt(+input.value);
   return { input, sync, get: () => +input.value };
 }
 
@@ -2090,8 +2144,7 @@ function cantSolve(o) {
   const mSer = mDC + mDW + mLL + mIM;
 
   // 단면
-  const tcMin = Math.max(o.dia, DECK.cover[o.exposure], 10);
-  const cover = tcMin + 10;
+  const cover = deckCover(o.exposure, o.dia);
   const d = o.h - cover - o.dia / 2;
   const as = Math.PI * o.dia * o.dia / 4 * 1000 / o.sp;
 
@@ -2145,7 +2198,9 @@ const ctBar  = bindRange2("ct-bar", v => v ? v.toFixed(0) + " kN/m" : "없음", 
 const ctArm  = bindRange2("ct-arm", v => (v / 100).toFixed(2) + " m", () => drawCant());
 const ctDia  = bindRange2("ct-dia", i => "D" + DECK.dias[i],          () => drawCant());
 const ctSp   = bindRange2("ct-sp",  v => v.toFixed(0) + " mm",        () => drawCant());
-const ctExp  = bindRange2("ct-exp", i => DECK.exposures[i],           () => drawCant());
+const ctExp  = bindRange2("ct-exp",
+  i => `${DECK.exposures[i]} (피복 ${deckCover(DECK.exposures[i], DECK.dias[ctDia.get()])} mm)`,
+  () => drawCant());
 const ctFck  = bindRange2("ct-fck", i => DECK.fcks[i] + " MPa",       () => drawCant());
 
 function cantState() {
@@ -2172,6 +2227,11 @@ function drawCant() {
     .map(([k, ok]) => `<div class="chip state" data-cls="${ok ? "인장지배단면" : "압축지배단면"}">` +
                       `<span class="k">${k}</span><span class="v">${ok ? "만족" : "불만족"}</span></div>`)
     .join("");
+
+  // 피복은 철근 지름에도 걸린다. 지름 슬라이더를 움직여도 등급 라벨이
+  // 따라오도록 여기서 다시 쓴다.
+  document.getElementById("ct-exp-out").textContent =
+    `${o.exposure} (피복 ${r.cover.toFixed(0)} mm)`;
 
   drawCantElevation(o, r);
   drawCantWidth(o, r);
@@ -2806,7 +2866,7 @@ function drawGirderSection(o, r) {
 function drawGirderLoss(o, r) {
   const svg = document.getElementById("g-loss");
   svg.innerHTML = "";
-  const W = 460, H = 300, m = { l: 50, r: 14, t: 24, b: 78 };
+  const W = 460, H = 330, m = { l: 50, r: 14, t: 24, b: 96 };
   const pw = W - m.l - m.r, ph = H - m.t - m.b;
   const grey = CSSVAR("--muted"), ink = CSSVAR("--ink");
   const red = CSSVAR("--comp"), blue = CSSVAR("--tens");
@@ -2825,29 +2885,43 @@ function drawGirderLoss(o, r) {
   }
 
   const bw = pw / 6 * 0.6;
-  const bar = (i, hiV, loV, colour, label) => {
+  const bar = (i, hiV, loV, colour, label, sub) => {
     const yA = Y(hiV), yB = Y(loV);
     svg.appendChild(el("rect", { x: X(i) - bw / 2, y: yA, width: bw,
       height: Math.max(yB - yA, 1.5), fill: colour, "fill-opacity": 0.85 }));
     svg.appendChild(el("text", { x: X(i), y: yA - 5, "font-size": 9,
       "text-anchor": "middle", fill: colour }, label));
+    if (sub) {
+      svg.appendChild(el("text", { x: X(i), y: yA - 15, "font-size": 9,
+        "text-anchor": "middle", fill: colour }, sub));
+    }
   };
+
+  const pct = v => (v / r.fJack * 100).toFixed(1) + " %";
 
   let lv = r.fJack;
   bar(0, lv, 0, grey, lv.toFixed(0));
   [r.dFric, r.dAnch, r.dElastic, r.dLong].forEach((d, i) => {
-    bar(i + 1, lv, lv - d, red, "-" + d.toFixed(0));
+    bar(i + 1, lv, lv - d, red, "-" + d.toFixed(0), pct(d));
     lv -= d;
   });
-  bar(5, lv, 0, blue, lv.toFixed(0));
+  bar(5, lv, 0, blue, lv.toFixed(0), pct(lv));
 
-  ["긴장", "마찰", "정착", "탄성", "장기", "유효"].forEach((n, i) => {
-    svg.appendChild(el("text", { x: X(i), y: m.t + ph + 17, "font-size": 10,
+  // 가로축 — 이름과 함께 각 손실이 긴장응력의 몇 % 인지 적는다
+  const names = ["긴장", "마찰", "정착", "탄성", "장기", "유효"];
+  const shares = [null, r.dFric, r.dAnch, r.dElastic, r.dLong, null];
+  names.forEach((n, i) => {
+    svg.appendChild(el("text", { x: X(i), y: m.t + ph + 16, "font-size": 10,
       "text-anchor": "middle", fill: ink }, n));
+    if (shares[i] !== null) {
+      svg.appendChild(el("text", { x: X(i), y: m.t + ph + 29, "font-size": 9,
+        "text-anchor": "middle", fill: red }, pct(shares[i])));
+    }
   });
-  svg.appendChild(el("text", { x: W / 2, y: H - 10, "font-size": 10,
+  svg.appendChild(el("text", { x: W / 2, y: H - 42, "font-size": 10,
     "text-anchor": "middle", fill: grey },
-    `총손실 ${(r.total * 100).toFixed(1)} % (즉시 ${(r.immediate * 100).toFixed(1)} %)`));
+    `총손실 ${(r.total * 100).toFixed(1)} %  =  즉시 ${(r.immediate * 100).toFixed(1)} %` +
+    `  +  장기 ${((r.total - r.immediate) * 100).toFixed(1)} %`));
 
   legend(svg, m.l, H - 26, [
     [grey, "긴장응력"], [red, "손실"], [blue, "유효응력"],
