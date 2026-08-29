@@ -43,6 +43,11 @@ myst_enable_extensions = [
 ]
 myst_heading_anchors = 4
 
+# MathJax — Sphinx 9 의 기본값은 ``mathjax@4`` 인데, jsdelivr 의 ``@4`` 태그가
+# 환경에 따라 받아지지 않아 수식이 통째로 렌더링되지 않는 일이 있었다.
+# 널리 배포된 3.x 를 명시적으로 고정한다.
+mathjax_path = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+
 # 노트북의 마크다운 셀은 조각 단위로 파싱되므로, 절 제목(##)으로 시작하는 셀마다
 # "문서가 H1 이 아닌 H2 로 시작한다"는 경고가 난다. 강의 노트북은 설명을 절마다
 # 나눠 담는 구성이라 이 경고가 정상 동작이다.

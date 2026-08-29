@@ -83,11 +83,13 @@ from concreteproperties_kds.kds24 import KDS24, check_shear, girder_live_load
 
 ---
 
-## `kds` — 휨 및 압축 (KDS 14 20 10, KDS 14 20 20)
+## KDS 14 (강도설계법)
 
-### 클래스
+### `kds` — 휨 및 압축 (KDS 14 20 10, KDS 14 20 20)
 
-#### `KDS14202022` (별칭 `KDS`)
+#### 클래스
+
+##### `KDS14202022` (별칭 `KDS`)
 
 ```python
 KDS14202022(column_type: str = "tie")
@@ -96,7 +98,7 @@ KDS14202022(column_type: str = "tie")
 KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 `"spiral"`(나선철근).
 
-##### 속성
+###### 속성
 
 `assign_concrete_section()` 호출 후 사용할 수 있다.
 
@@ -112,7 +114,7 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 | `tensile_load` | 순수인장 하중 $P_{nt}$ |
 | `concrete_section` | 할당된 `ConcreteSection` 객체 |
 
-##### 메서드
+###### 메서드
 
 | 메서드 | 반환 |
 |---|---|
@@ -136,7 +138,7 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 `calculate_uncracked_stress()`, `calculate_cracked_stress()`,
 `calculate_service_stress()`, `calculate_ultimate_stress()`.
 
-### 함수
+#### 함수
 
 단면 없이 재료 상수만 구할 때 쓴다.
 
@@ -151,7 +153,7 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 | `minimum_flexural_moment(m_cr)` | $1.2 M_{cr}$ | KDS 14 20 20 4.2.2 |
 | `minimum_flexural_moment_alternative(m_u)` | $\frac{4}{3} M_u$ | KDS 14 20 20 4.2.2(2) |
 
-### 모듈 상수
+#### 모듈 상수
 
 | 상수 | 값 |
 |---|---|
@@ -169,7 +171,7 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 
 ---
 
-## `loads` — 하중조합 (KDS 14 20 10 4.2.2)
+### `loads` — 하중조합 (KDS 14 20 10 4.2.2)
 
 | 이름 | 내용 |
 |---|---|
@@ -183,7 +185,7 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 | `LOAD_SYMBOLS`, `ROOF_LOADS` | 하중 기호 |
 | `LIVE_LOAD_REDUCTION_THRESHOLD`, `LIVE_LOAD_FACTOR_REDUCED` | 5.0 kN/m², 0.5 |
 
-## `shear` — 전단 및 비틀림 (KDS 14 20 22)
+### `shear` — 전단 및 비틀림 (KDS 14 20 22)
 
 | 이름 | 내용 |
 |---|---|
@@ -201,7 +203,7 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 | `check_torsion_section(...)` | `(소요응력, 한계응력, ok)` |
 | `PHI_SHEAR`, `S_MAX_ABS`, `S_MAX_ABS_CLOSE` | 0.75, 600, 300 |
 
-## `serviceability` — 사용성 (KDS 14 20 30)
+### `serviceability` — 사용성 (KDS 14 20 30)
 
 | 이름 | 내용 |
 |---|---|
@@ -220,7 +222,7 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 | `shrinkage_temperature_spacing(thickness)` | 수축·온도철근 최대 간격 |
 | `CREEP_FACTOR`, `MINIMUM_THICKNESS_RATIO`, `DEFLECTION_LIMIT`, `KAPPA_CR_DRY`, `KAPPA_CR_OTHER` | 편집 가능한 표·상수 |
 
-## `durability` — 내구성 (KDS 14 20 40)
+### `durability` — 내구성 (KDS 14 20 40)
 
 | 이름 | 내용 |
 |---|---|
@@ -231,7 +233,7 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 | `print_exposure_table()` | 등급표 출력 |
 | `MAX_CHLORIDE_ION` | 참고용 최대 염화물 이온량 (KDS 규정 아님) |
 
-## `detailing` — 철근상세·정착·이음 (KDS 14 20 50, 52)
+### `detailing` — 철근상세·정착·이음 (KDS 14 20 50, 52)
 
 | 이름 | 내용 |
 |---|---|
@@ -248,7 +250,7 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 | `BAR_PROPERTIES`, `MINIMUM_COVER`, `LDB_FACTOR`, `DEVELOPMENT_TABLE_FACTOR`, `COVER_REDUCTION_CONDITIONS` | 편집 가능한 표·상수 |
 | `LD_MIN`, `LDC_MIN`, `LDH_MIN`, `LAP_MIN` | 300, 200, 150, 300 mm |
 
-## `slender` — 세장 기둥 (KDS 14 20 20 4.4)
+### `slender` — 세장 기둥 (KDS 14 20 20 4.4)
 
 | 이름 | 내용 |
 |---|---|
@@ -262,7 +264,7 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 | `check_slenderness(...)` → `SlendernessCheck` | 종합 검토 |
 | `PHI_K` | 0.75 |
 
-## `psc` — 프리스트레스트 (KDS 14 20 60)
+### `psc` — 프리스트레스트 (KDS 14 20 60)
 
 | 이름 | 내용 |
 |---|---|
@@ -279,7 +281,7 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 | `KDSPrestressed` | `assign_prestressed_section`, `extreme_depth`, `net_tensile_strain`, `ultimate_bending_capacity` |
 | `EPS_Y_PSC`, `EPS_TL_PSC`, `GAMMA_P`, `CRACK_CLASS_LIMIT` | 0.002, 0.005 등 |
 
-## `biaxial` — 2축 휨 간략식
+### `biaxial` — 2축 휨 간략식
 
 | 이름 | 내용 |
 |---|---|
@@ -291,9 +293,9 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 
 ---
 
-# KDS 24 (한계상태설계법)
+## KDS 24 (한계상태설계법)
 
-## `kds24.materials` — 재료 (KDS 24 14 21 1.4, 3.1)
+### `kds24.materials` — 재료 (KDS 24 14 21 1.4, 3.1)
 
 | 이름 | 내용 |
 |---|---|
@@ -313,7 +315,7 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 | `equivalent_block(fck, phi_c)` | $(\alpha_{eq}, \beta_{eq})$ — 수치적분 |
 | `concrete_curve_table()` | 표 3.1-3 출력 |
 
-## `kds24.design_code` — 설계기준 클래스 (KDS 24 14 21 4.1.1)
+### `kds24.design_code` — 설계기준 클래스 (KDS 24 14 21 4.1.1)
 
 | 이름 | 내용 |
 |---|---|
@@ -328,7 +330,7 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 | `minimum_eccentricity(h)` | $e_{min} = \max(h/30, 20)$, 4.1.1.2(5) |
 | `biaxial_exponent(n_ed, n_rd, shape)` | 식 (4.1-4) 의 지수 |
 
-## `kds24.loads` — 하중조합 (KDS 24 12 11 4.1)
+### `kds24.loads` — 하중조합 (KDS 24 12 11 4.1)
 
 | 이름 | 내용 |
 |---|---|
@@ -340,7 +342,7 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 | `evaluate_all(loads, limit_state, ...)`, `governing_combination(...)` | 전체 평가·지배 조합 |
 | `LOAD_SYMBOLS`, `PERMANENT_SYMBOLS`, `LIVE_SYMBOLS` | 하중 기호 |
 
-## `kds24.live_load` — 차량활하중 (KDS 24 12 21 4.3, 4.4)
+### `kds24.live_load` — 차량활하중 (KDS 24 12 21 4.3, 4.4)
 
 | 이름 | 내용 |
 |---|---|
@@ -355,7 +357,7 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 | `impact_factor(limit_state)`, `impact_buried(cover_depth)` | 표 4.4-1, 식 (4.4-1) |
 | `fatigue_truck_moment(span, step)`, `truck_lane_fraction(n)`, `adtt_single_lane(adtt, n)` | 4.3.2 |
 
-## `kds24.shear` — 전단 (KDS 24 14 21 4.1.2)
+### `kds24.shear` — 전단 (KDS 24 14 21 4.1.2)
 
 | 이름 | 내용 |
 |---|---|
@@ -375,7 +377,7 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 | `required_stirrup_spacing(...)` | 요구 간격 |
 | `COT_THETA_MIN`, `COT_THETA_MAX`, `RHO_MAX`, `Z_RATIO` | 1.0, 2.5, 0.02, 0.9 |
 
-## `kds24.serviceability` — 사용성과 피로 (KDS 24 14 21 4.2, 4.3)
+### `kds24.serviceability` — 사용성과 피로 (KDS 24 14 21 4.2, 4.3)
 
 | 이름 | 내용 |
 |---|---|
@@ -399,7 +401,7 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 
 ---
 
-## `kds24.deck` — 교량 바닥판 (KDS 24 10 11 4.6.2, 24 14 21 4.6.5)
+### `kds24.deck` — 교량 바닥판 (KDS 24 10 11 4.6.2, 24 14 21 4.6.5)
 
 | 이름 | 내용 |
 |---|---|
@@ -419,7 +421,7 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 
 ---
 
-## `kds24.psc` — 도입응력과 손실 (KDS 24 14 21 1.5.7, 3.3)
+### `kds24.psc` — 도입응력과 손실 (KDS 24 14 21 1.5.7, 3.3)
 
 | 이름 | 내용 |
 |---|---|
@@ -443,7 +445,7 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 
 ---
 
-## `kds24.girder` — PSC I형 거더 (KDS 24 14 21 4.1, 4.2)
+### `kds24.girder` — PSC I형 거더 (KDS 24 14 21 4.1, 4.2)
 
 | 이름 | 내용 |
 |---|---|
