@@ -1,7 +1,11 @@
 """concreteproperties_kds.
 
-``concreteproperties`` 를 국가건설기준 **KDS 14 20 (콘크리트구조 설계기준)** 에
-맞추어 사용하기 위한 설계기준 확장 패키지.
+``concreteproperties`` 를 국가건설기준에 맞추어 사용하기 위한 설계기준 확장
+패키지. 두 계열의 기준을 함께 다룬다.
+
+* **KDS 14 20 (콘크리트구조 설계기준)** — 강도설계법. 최상위 모듈들이 담당한다.
+* **KDS 24 14 21 (교량 콘크리트교 설계기준)** — 한계상태설계법.
+  :mod:`~concreteproperties_kds.kds24` 서브패키지가 담당한다.
 
 모듈 구성
 ---------
@@ -30,6 +34,8 @@
      - 프리스트레스트 (KDS 14 20 60)
    * - :mod:`~concreteproperties_kds.biaxial`
      - 2축 휨 간략식 (문헌)
+   * - :mod:`~concreteproperties_kds.kds24`
+     - 한계상태설계법 (KDS 24 14 21)
 
 설계식에는 KDS 조문과 식 번호를 표기하였다. 전체 목록은 문서의
 "설계식 목록" 을 참고한다.
@@ -39,6 +45,7 @@ from concreteproperties_kds import (
     biaxial,
     detailing,
     durability,
+    kds24,
     loads,
     psc,
     serviceability,
@@ -209,6 +216,7 @@ __all__ = [
     "flexural_stiffness",
     "friction_loss",
     "governing_requirements",
+    "kds24",
     "lap_splice_compression",
     "lap_splice_tension",
     "load_contour",
