@@ -295,7 +295,7 @@ def _interpolate(stress: float, values: tuple[float | None, ...], label: str) ->
         first = values[0]
 
         if first is None:
-            msg = f"{label} 표에 값이 없다"
+            msg = f"{label} 에 값이 없다"
             raise ValueError(msg)
 
         return first
@@ -308,7 +308,7 @@ def _interpolate(stress: float, values: tuple[float | None, ...], label: str) ->
 
             if v_low is None or v_high is None:
                 msg = (
-                    f"{label} 표는 철근 응력 {stress:.0f} MPa 를 다루지 않는다. "
+                    f"{label} 는 철근 응력 {stress:.0f} MPa 를 다루지 않는다. "
                     "철근량을 늘려 응력을 낮추어야 한다."
                 )
                 raise ValueError(msg)
@@ -318,7 +318,7 @@ def _interpolate(stress: float, values: tuple[float | None, ...], label: str) ->
             return v_low + ratio * (v_high - v_low)
 
     msg = (
-        f"{label} 표의 상한(360 MPa)을 넘는 철근 응력: {stress:.0f} MPa. "
+        f"{label} 의 상한(360 MPa)을 넘는 철근 응력: {stress:.0f} MPa. "
         "철근량을 늘려 응력을 낮추어야 한다."
     )
     raise ValueError(msg)
@@ -392,7 +392,7 @@ def effective_tension_depth(h: float, d: float, c: float) -> float:
     .. math::
         d_{cte} = \min \left[ 2.5 (h - d),\ \frac{h - c}{3},\ \frac{h}{2} \right]
 
-    균열폭을 좌우하는 것은 단면 전체가 아니라 **철근 주위의 콘크리트**다. 그
+    균열폭을 좌우하는 것은 단면 전체가 아니라 **철근 주위의 콘크리트다**. 그
     범위를 정하는 규정이다.
 
     Args:
@@ -423,7 +423,7 @@ def strain_difference(
         - k_t \frac{f_{cte}}{E_s \rho_e} \left( 1 + n \rho_e \right)
         \ge 0.6 \frac{f_{so}}{E_s}
 
-    빼는 항이 **인장강화효과**다. 균열과 균열 사이의 콘크리트가 아직 인장을
+    빼는 항이 **인장강화효과다**. 균열과 균열 사이의 콘크리트가 아직 인장을
     나눠 지고 있어 철근 변형률이 균열면 값보다 작다는 뜻이며, 하한 0.6 은 그
     효과를 지나치게 크게 보지 않도록 막는다.
 
@@ -650,7 +650,7 @@ def fatigue_stress_range_limit(f_min: float = 0.0, welded: bool = False) -> floa
     .. math::
         f_{fat} = 110 - 0.33 f_{min} \quad (\text{가로 용접 있음})
 
-    :math:`f_{min}` 은 피로하중조합에 의한 **최소 활하중 응력**이며 인장이 양수다.
+    :math:`f_{min}` 은 피로하중조합에 의한 **최소 활하중 응력**, 인장이 양수다.
     이미 인장을 받고 있는 철근일수록 허용 진폭이 줄어든다.
 
     Args:
@@ -701,7 +701,7 @@ def fatigue_check_required(f_dead_compression: float, f_live_tension: float) -> 
     **KDS 24 14 21 4.3.1(4)**
 
     고정하중과 프리스트레스에 의한 압축응력이 피로하중조합의 최대 활하중
-    인장응력의 **두 배 미만**일 때만 검증한다. 압축이 충분히 크면 철근이 인장으로
+    인장응력의 **두 배 미만일** 때만 검증한다. 압축이 충분히 크면 철근이 인장으로
     넘어가지 않아 응력 진폭이 생기지 않기 때문이다.
 
     Args:

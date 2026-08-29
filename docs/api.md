@@ -12,6 +12,8 @@ from concreteproperties_kds.shear import check_shear         # 모듈
 from concreteproperties_kds import shear                     # 모듈 객체
 ```
 
+**KDS 14 20 (강도설계법)** — 최상위 모듈
+
 | 모듈 | 대상 기준 |
 |---|---|
 | `kds` | KDS 14 20 10, 14 20 20 — 휨 및 압축 |
@@ -23,6 +25,23 @@ from concreteproperties_kds import shear                     # 모듈 객체
 | `slender` | KDS 14 20 20 4.4 — 세장 기둥 |
 | `psc` | KDS 14 20 60 — 프리스트레스트 |
 | `biaxial` | 2축 휨 간략식 |
+
+**KDS 24 (한계상태설계법, 교량)** — `kds24` 서브패키지
+
+| 모듈 | 대상 기준 |
+|---|---|
+| `kds24.materials` | KDS 24 14 21 1.4, 3.1 — 재료계수와 설계 재료강도 |
+| `kds24.design_code` | KDS 24 14 21 4.1.1 — `KDS24` 클래스 |
+| `kds24.loads` | KDS 24 12 11 4.1 — 하중조합 |
+| `kds24.live_load` | KDS 24 12 21 4.3, 4.4 — 차량활하중 KL-510 |
+| `kds24.shear` | KDS 24 14 21 4.1.2 — 변각 트러스 전단 |
+| `kds24.serviceability` | KDS 24 14 21 4.2, 4.3 — 사용성과 피로 |
+
+`kds24` 의 이름도 서브패키지에서 바로 가져올 수 있다.
+
+```python
+from concreteproperties_kds.kds24 import KDS24, check_shear, girder_live_load
+```
 
 ## 자동 생성 API 문서
 
@@ -45,6 +64,12 @@ from concreteproperties_kds import shear                     # 모듈 객체
     concreteproperties_kds.slender
     concreteproperties_kds.psc
     concreteproperties_kds.biaxial
+    concreteproperties_kds.kds24.materials
+    concreteproperties_kds.kds24.design_code
+    concreteproperties_kds.kds24.loads
+    concreteproperties_kds.kds24.live_load
+    concreteproperties_kds.kds24.shear
+    concreteproperties_kds.kds24.serviceability
 ```
 
 아래는 손으로 정리한 요약이다. 설계식과 조문의 대응만 보려면
@@ -260,6 +285,114 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 
 ---
 
+# KDS 24 (한계상태설계법)
+
+## `kds24.materials` — 재료 (KDS 24 14 21 1.4, 3.1)
+
+| 이름 | 내용 |
+|---|---|
+| `MATERIAL_FACTORS` | 표 1.4-1 — 한계상태별 $(\phi_c, \phi_s)$ |
+| `PHI_C_ULS`, `PHI_S_ULS`, `ALPHA_CC`, `ES` | 0.65, 0.90, 0.85, 200,000 |
+| `CURVE_FCK`, `CURVE_N`, `CURVE_EPS_CO`, `CURVE_EPS_CU` | 표 3.1-3 |
+| `material_factors(limit_state)` | $(\phi_c, \phi_s)$ |
+| `mean_compressive_strength(fck)` | $f_{cm}$, 식 (3.1-1) |
+| `mean_tensile_strength(fck)`, `characteristic_tensile_strength(fck)` | $f_{ctm}$, $f_{ctk}$ |
+| `elastic_modulus(fck, m_c)` | $E_c$ |
+| `design_compressive_strength(fck, phi_c)` | $f_{cd}$, 식 (3.1-47) |
+| `design_tensile_strength(fck, phi_c, alpha_t)` | $f_{ctd}$, 식 (3.1-48) |
+| `design_yield_strength(fy, phi_s)` | $f_{yd}$ |
+| `curve_parameters(fck)` | $(n, \varepsilon_{co}, \varepsilon_{cu})$ |
+| `design_stress(fck, eps_c, phi_c)` | 식 (3.1-38), (3.1-39) |
+| `design_profile(fck, phi_c, n_points)` | `ConcreteUltimateProfile` |
+| `equivalent_block(fck, phi_c)` | $(\alpha_{eq}, \beta_{eq})$ — 수치적분 |
+| `concrete_curve_table()` | 표 3.1-3 출력 |
+
+## `kds24.design_code` — 설계기준 클래스 (KDS 24 14 21 4.1.1)
+
+| 이름 | 내용 |
+|---|---|
+| `KDS24(phi_c=0.65, phi_s=0.90)` | 설계기준 객체 |
+| `.create_concrete_material(...)`, `.create_steel_material(...)` | 재료계수가 반영된 재료 |
+| `.assign_concrete_section(concrete_section)` | 단면 할당 |
+| `.design_bending_capacity(theta, n_design)` | 설계휨강도 ($\phi$ 없음) |
+| `.moment_interaction_diagram(theta, **kwargs)` | 설계 상관도 **하나** |
+| `.biaxial_bending_diagram(n_design, **kwargs)` | 설계 2축 휨 상관도 |
+| `.squash_tensile_load()`, `.net_tensile_strain(theta, d_n)` | — |
+| `.minimum_moment(n_design, h)` | 최소편심에 의한 최소 휨모멘트 |
+| `minimum_eccentricity(h)` | $e_{min} = \max(h/30, 20)$, 4.1.1.2(5) |
+| `biaxial_exponent(n_ed, n_rd, shape)` | 식 (4.1-4) 의 지수 |
+
+## `kds24.loads` — 하중조합 (KDS 24 12 11 4.1)
+
+| 이름 | 내용 |
+|---|---|
+| `LOAD_COMBINATIONS`, `COMBINATIONS_BY_NAME` | 표 4.1-1 의 13개 조합 |
+| `LoadCombination` | `evaluate(loads, permanent_kinds, maximise, deformation, gamma_tg, gamma_sd, gamma_eq, eta)` |
+| `PERMANENT_LOAD_FACTORS`, `permanent_load_factor(kind, maximum)` | 표 4.1-2 |
+| `load_modifier(ductility, redundancy, importance, maximum)` | $\eta$, 식 (1.3-2), (1.3-3) |
+| `bridge_grade_factor(grade)`, `BRIDGE_GRADE_FACTORS` | 1 / 0.75 / 0.5625 |
+| `evaluate_all(loads, limit_state, ...)`, `governing_combination(...)` | 전체 평가·지배 조합 |
+| `LOAD_SYMBOLS`, `PERMANENT_SYMBOLS`, `LIVE_SYMBOLS` | 하중 기호 |
+
+## `kds24.live_load` — 차량활하중 (KDS 24 12 21 4.3, 4.4)
+
+| 이름 | 내용 |
+|---|---|
+| `TRUCK_AXLE_LOADS`, `TRUCK_AXLE_POSITIONS`, `TRUCK_TOTAL_LOAD` | KL-510 (48/192/135/135 kN, 12.0 m) |
+| `number_of_lanes(roadway_width, plan_lane_width)` | 식 (4.3-1) |
+| `lane_width(roadway_width, n_lanes)` | 식 (4.3-2) |
+| `multiple_presence(n_lanes)` | 표 4.3-1 |
+| `lane_load(span)` | 표 4.3-2 표준차로하중 |
+| `truck_moment(span, step)`, `truck_shear(span, section, step)` | 단순보 최대 단면력 |
+| `lane_moment(span, section)`, `lane_shear(span, section)` | 차로하중 단면력 |
+| `girder_live_load(span, section, limit_state, step)` → `LiveLoadEffect` | 4.3.1.5 |
+| `impact_factor(limit_state)`, `impact_buried(cover_depth)` | 표 4.4-1, 식 (4.4-1) |
+| `fatigue_truck_moment(span, step)`, `truck_lane_fraction(n)`, `adtt_single_lane(adtt, n)` | 4.3.2 |
+
+## `kds24.shear` — 전단 (KDS 24 14 21 4.1.2)
+
+| 이름 | 내용 |
+|---|---|
+| `kappa(d)` | 크기 효과 $1 + \sqrt{200/d} \le 2$ |
+| `nu(fck)` | 식 (4.1-12) 압축강도 유효계수 |
+| `axial_stress(n_u, a_c, fck, phi_c)` | $f_n \le 0.2\phi_c f_{ck}$ |
+| `concrete_shear_strength(...)` | 식 (4.1-7) |
+| `minimum_concrete_shear_strength(...)` | 식 (4.1-8) |
+| `design_concrete_shear_strength(...)` | 둘 중 큰 값 |
+| `uncracked_shear_strength(...)` | 식 (4.1-9) — 휨균열 없는 PSC 구간 |
+| `shear_reinforcement_strength(...)` | 식 (4.1-16) $V_{sd}$ |
+| `max_shear_strength(...)` | 식 (4.1-17) $V_{d,max}$ |
+| `alpha_cw(f_n, fck, phi_c)` | 식 (4.1-23) |
+| `maximum_shear_reinforcement(...)`, `minimum_shear_reinforcement_ratio(...)` | 식 (4.1-18), (4.6-7) |
+| `maximum_stirrup_spacing(d, alpha)` | 식 (4.6-8) |
+| `check_shear(...)` → `ShearCheck` | 종합 검토 |
+| `required_stirrup_spacing(...)` | 요구 간격 |
+| `COT_THETA_MIN`, `COT_THETA_MAX`, `RHO_MAX`, `Z_RATIO` | 1.0, 2.5, 0.02, 0.9 |
+
+## `kds24.serviceability` — 사용성과 피로 (KDS 24 14 21 4.2, 4.3)
+
+| 이름 | 내용 |
+|---|---|
+| `EXPOSURE_MINIMUM_GRADE`, `DESIGN_GRADES`, `DesignGrade` | 표 4.2-1, 표 4.2-2 |
+| `minimum_design_grade(exposure, member)` | 노출환경 → 설계등급 |
+| `concrete_stress_limit(fck, sustained)` | $0.45f_{ck}$ / $0.6f_{ck}$ |
+| `steel_stress_limit(fy)`, `tendon_stress_limit(fpu)` | $0.8f_y$, $0.65f_{pu}$ |
+| `minimum_crack_reinforcement(a_ct, f_ct, f_s, k_c, k)` | 식 (4.2-1) |
+| `stress_distribution_factor(...)`, `nonuniform_stress_factor(width)` | $k_c$, $k$ |
+| `MAX_BAR_DIAMETER`, `max_bar_diameter(f_s, member)` | 표 4.2-4 |
+| `MAX_BAR_SPACING`, `max_bar_spacing(f_s, member)` | 표 4.2-5 |
+| `effective_tension_depth(h, d, c)` | $d_{cte}$ |
+| `strain_difference(f_so, f_cte, rho_e, n, k_t)` | 식 (4.2-5) |
+| `crack_spacing(...)`, `crack_spacing_unreinforced(h, c)` | 식 (4.2-7a), (4.2-7b) |
+| `crack_width(...)` → `CrackWidthCheck` | 식 (4.2-4) |
+| `web_effective_tensile_strength(f_2, fck)` | 식 (4.2-3) |
+| `deflection_limit(span, pedestrian, cantilever)` | 4.2.4.1 |
+| `fatigue_stress_range_limit(f_min, welded)` | 식 (4.3-1), (4.3-2) |
+| `COUPLER_FATIGUE_STRENGTH`, `coupler_fatigue_strength(kind, n_cycles)` | 표 4.3-1 |
+| `fatigue_check_required(f_dead_compression, f_live_tension)` | 4.3.1(4) |
+
+---
+
 ## 예외 정리
 
 | 상황 | 예외 |
@@ -274,3 +407,7 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 | 전단철근으로도 요구 강도를 만족 못함 | `ValueError` |
 | $P_u \ge 0.75 P_c$ (좌굴) | `ValueError` |
 | 정의되지 않은 노출등급·철근 호칭·재하기간·지지조건·긴장 단계 | `ValueError` |
+| (KDS 24) 재료계수가 0 이하이거나 1 초과 | `ValueError` |
+| (KDS 24) $\cot\theta$ 가 1.0 ~ 2.5 밖 | `ValueError` |
+| (KDS 24) 표 4.2-4·4.2-5 가 다루지 않는 철근 응력 | `ValueError` |
+| (KDS 24) 표 4.1-2·표 4.2-1·표 4.3-1 에 없는 종류 | `ValueError` |

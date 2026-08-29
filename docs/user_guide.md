@@ -17,8 +17,10 @@ user_guide/design_codes
 user_guide/assumptions
 ```
 
-KDS 모듈별 상세 문서는 [설계기준](user_guide/design_codes.md#kds-14-20-모듈-구성)
-에서 찾을 수 있다.
+KDS 모듈별 상세 문서는 [설계기준](user_guide/design_codes.md) 에서 찾을 수 있다.
+강도설계법(KDS 14 20)과 한계상태설계법(KDS 24)의 두 갈래로 나뉘어 있고, 둘의
+차이를 견준 문서는 [KDS 14 와 KDS 24 의 비교](user_guide/design_codes/comparison.md)
+에 있다.
 
 ## 작업 흐름
 

@@ -8,13 +8,35 @@
 
 | 기준 | 클래스 | 비고 |
 |---|---|---|
-| **KDS 14 20 (대한민국)** | `concreteproperties_kds.KDS` | [상세 문서](design_codes/kds.md) — 이 저장소에서 추가 |
+| **KDS 14 20 (대한민국, 강도설계법)** | `concreteproperties_kds.KDS` | [상세 문서](design_codes/kds.md) — 이 저장소에서 추가 |
+| **KDS 24 (대한민국, 한계상태설계법·교량)** | `concreteproperties_kds.kds24.KDS24` | [상세 문서](design_codes/kds24.md) — 이 저장소에서 추가 |
 | AS 3600:2018 (호주) | `concreteproperties.design_codes.AS3600` | 원 패키지 |
 | NZS 3101:2006 (뉴질랜드) | `concreteproperties.design_codes.NZS3101` | 원 패키지 |
 | NZSEE C5 평가지침 | `concreteproperties.design_codes.NZS3101` | 원 패키지 |
 | AS 5100 (호주, 교량) | — | 미구현 |
 
-## KDS 14 20 모듈 구성
+## 두 갈래 — KDS 14 와 KDS 24
+
+이 저장소는 대한민국의 두 설계 체계를 모두 다룬다.
+
+| | KDS 14 20 | KDS 24 |
+|---|---|---|
+| 이름 | 콘크리트구조 설계기준 (**강도설계법**) | 교량 설계기준 (**한계상태설계법**) |
+| 대상 | 건축물·일반 콘크리트구조 | 교량 |
+| 안전율 | 단면 강도감소계수 $\phi$ | 재료계수 $\phi_c$, $\phi_s$ |
+| 패키지 | `concreteproperties_kds` 최상위 | `concreteproperties_kds.kds24` |
+| 진입점 | `KDS` | `KDS24` |
+
+둘의 차이를 숫자와 그림으로 견준 문서가 따로 있다 —
+**[KDS 14 와 KDS 24 의 비교](design_codes/comparison.md)**. 어느 쪽을 쓸지
+고민 중이거나, 같은 단면의 두 결과가 왜 다른지 알고 싶다면 여기부터 읽는다.
+
+```{warning}
+두 기준을 섞어 쓰면 안 된다. 하중계수와 재료계수·강도감소계수는 한 벌로 보정된
+값이라, KDS 24 의 하중조합에 KDS 14 의 $\phi$ 를 쓰면 안전율이 무너진다.
+```
+
+## KDS 14 20 모듈 구성 (강도설계법)
 
 KDS 는 단면 해석뿐 아니라 하중조합·전단·사용성·내구성·상세까지 함께 제공한다.
 `kds` 모듈이 단면 해석의 중심이고, 나머지는 단면 요소망과 무관한 순수 함수
@@ -35,6 +57,20 @@ KDS 는 단면 해석뿐 아니라 하중조합·전단·사용성·내구성·�
 각 코드가 무엇을 정하는 기준인지는
 [KDS 14 20 계열이란](../index.md#kds-14-20-계열이란) 을, 설계식과 조문의 1:1
 대응은 [설계식 목록](design_codes/equations.md) 을 참고한다.
+
+## KDS 24 서브패키지 구성 (한계상태설계법)
+
+교량은 하중부터 다르다. 그래서 `kds24` 는 단면 해석뿐 아니라 하중조합과
+차량활하중까지 함께 담는다.
+
+| 모듈 | 대상 기준 | 무엇을 구하는가 | 문서 |
+|---|---|---|---|
+| `kds24.materials` | 24 14 21 1.4, 3.1 | 재료계수, 설계 재료강도, 포물선-직선 곡선 | [한계상태설계법](design_codes/kds24.md) |
+| `kds24.design_code` | 24 14 21 4.1.1 | `KDS24` 클래스 — $M_{Rd}$, P-M 상관도, 최소편심 | [한계상태설계법](design_codes/kds24.md) |
+| `kds24.loads` | 24 12 11 4.1 | 13개 하중조합, 하중수정계수 $\eta$, 교량 등급 | [하중조합과 설계하중](design_codes/kds24_loads.md) |
+| `kds24.live_load` | 24 12 21 4.3, 4.4 | KL-510 표준트럭·표준차로하중, 충격 | [하중조합과 설계하중](design_codes/kds24_loads.md) |
+| `kds24.shear` | 24 14 21 4.1.2 | 변각 트러스 모델 전단 | [전단](design_codes/kds24_shear.md) |
+| `kds24.serviceability` | 24 14 21 4.2, 4.3 | 응력 한계, 균열폭, 처짐, 피로 | [사용성과 피로](design_codes/kds24_serviceability.md) |
 
 전체 설계 흐름을 하나로 엮은 예제는
 [`examples/17_종합설계.py`](../../examples/17_종합설계.py) 를 참고한다.
@@ -83,14 +119,19 @@ f_res, u_res, phi = code.ultimate_bending_capacity()  # 5) 해석
 :hidden:
 :maxdepth: 1
 
-design_codes/kds
-design_codes/kds_loads
-design_codes/kds_shear
-design_codes/kds_serviceability
-design_codes/kds_durability
-design_codes/kds_detailing
-design_codes/kds_slender
-design_codes/kds_psc
-design_codes/kds_biaxial
-design_codes/equations
+KDS 14 와 KDS 24 의 비교 <design_codes/comparison>
+KDS 14 — 휨 및 압축 <design_codes/kds>
+KDS 14 — 하중조합 <design_codes/kds_loads>
+KDS 14 — 전단 및 비틀림 <design_codes/kds_shear>
+KDS 14 — 사용성 <design_codes/kds_serviceability>
+KDS 14 — 내구성 <design_codes/kds_durability>
+KDS 14 — 철근상세·정착·이음 <design_codes/kds_detailing>
+KDS 14 — 세장 기둥 <design_codes/kds_slender>
+KDS 14 — 프리스트레스트 <design_codes/kds_psc>
+KDS 14 — 2축 휨 간략식 <design_codes/kds_biaxial>
+KDS 24 — 한계상태설계법 <design_codes/kds24>
+KDS 24 — 하중조합과 설계하중 <design_codes/kds24_loads>
+KDS 24 — 전단 <design_codes/kds24_shear>
+KDS 24 — 사용성과 피로 <design_codes/kds24_serviceability>
+설계식 목록 <design_codes/equations>
 ```
