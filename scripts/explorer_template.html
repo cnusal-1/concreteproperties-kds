@@ -303,6 +303,7 @@
     <button role="tab" id="tab-block" aria-selected="true" aria-controls="panel-block">L1 · 등가응력블록</button>
     <button role="tab" id="tab-col" aria-selected="false" aria-controls="panel-col">L2 · 강도감소계수 φ</button>
     <button role="tab" id="tab-beam" aria-selected="false" aria-controls="panel-beam">L3 · 설계 파라미터</button>
+    <button role="tab" id="tab-deck" aria-selected="false" aria-controls="panel-deck">L4 · 바닥판 설계</button>
   </div>
 </header>
 
@@ -536,6 +537,93 @@
     </div>
   </section>
 
+  <!-- ── L4 · 바닥판 설계 ─────────────────────────────────── -->
+  <section id="panel-deck" role="tabpanel" aria-labelledby="tab-deck" class="hidden">
+    <div class="layout">
+      <div class="rail">
+        <h2>바닥판 조건</h2>
+        <p class="sub" style="margin:2px 0 0;font-size:12.5px">
+          연속판 1 m 폭, f<sub>ck</sub> 27 MPa, SD400.
+          KDS 24 10 11 4.6.2 는 바닥판 콘크리트를 27 MPa 로 정한다.
+        </p>
+
+        <div class="control">
+          <div class="control-head"><label for="d-span">거더 중심 간격</label><output id="d-span-out"></output></div>
+          <input type="range" id="d-span" min="150" max="450" step="5" value="250">
+          <div class="ticks"><span>1.5 m</span><span>4.5 m</span></div>
+        </div>
+
+        <div class="control">
+          <div class="control-head"><label for="d-t">바닥판 두께 t</label><output id="d-t-out"></output></div>
+          <input type="range" id="d-t" min="180" max="400" step="5" value="240">
+          <div class="ticks"><span>180 mm</span><span>400 mm</span></div>
+        </div>
+
+        <div class="control">
+          <div class="control-head"><label for="d-dia">주철근 지름</label><output id="d-dia-out"></output></div>
+          <input type="range" id="d-dia" min="0" max="5" step="1" value="2">
+          <div class="ticks"><span>D10</span><span>D25</span></div>
+        </div>
+
+        <div class="control">
+          <div class="control-head"><label for="d-sp">주철근 간격</label><output id="d-sp-out"></output></div>
+          <input type="range" id="d-sp" min="80" max="320" step="5" value="150">
+          <div class="ticks"><span>80 mm</span><span>320 mm</span></div>
+        </div>
+
+        <div class="control">
+          <div class="control-head"><label for="d-exp">노출등급</label><output id="d-exp-out"></output></div>
+          <input type="range" id="d-exp" min="0" max="9" step="1" value="1">
+          <div class="ticks"><span>E0</span><span>ES3</span></div>
+        </div>
+
+        <div class="control">
+          <div class="control-head"><label for="d-pav">포장 두께</label><output id="d-pav-out"></output></div>
+          <input type="range" id="d-pav" min="0" max="150" step="5" value="80">
+          <div class="ticks"><span>없음</span><span>150 mm</span></div>
+        </div>
+
+        <p class="sub" style="margin-top:14px">
+          바닥판 설계식은 모두 닫힌 형태라 이 탭은 <b>미리 계산한 격자를 쓰지 않는다</b>.
+          슬라이더를 어디에 두든 값이 정확하다.
+        </p>
+      </div>
+
+      <div>
+        <div class="chips" id="d-chips"></div>
+        <div class="plots">
+          <div class="card">
+            <h3>단면과 배근</h3>
+            <p class="cap">피복이 유효깊이를 갉아먹는다. 노출등급을 올려 보면 철근이 위로 밀려 올라가는 것이 보인다.</p>
+            <svg id="d-sec" viewBox="0 0 460 290" role="img" aria-label="바닥판 단면과 철근 배치"></svg>
+          </div>
+          <div class="card">
+            <h3>하중 분해와 강도</h3>
+            <p class="cap">왼쪽 막대가 극한Ⅰ 조합의 구성, 오른쪽이 배치 철근의 설계휨강도다.</p>
+            <svg id="d-bars" viewBox="0 0 460 290" role="img" aria-label="하중 분해와 설계휨강도"></svg>
+            <div class="legend">
+              <span><i style="background:var(--muted)"></i>고정 DC</span>
+              <span><i style="background:var(--tran)"></i>고정 DW</span>
+              <span><i style="background:var(--comp)"></i>활하중 + 충격</span>
+              <span><i style="background:var(--tens)"></i>M<sub>Rd</sub></span>
+            </div>
+          </div>
+          <div class="card wide">
+            <h3>강도가 먼저 걸리는가, 균열이 먼저 걸리는가</h3>
+            <p class="cap">가로축은 주철근 간격. 세 한계선 중 가장 왼쪽에 있는 것이 설계를 지배한다. 철근을 굵게 하면 순서가 뒤집힌다.</p>
+            <svg id="d-sweep" viewBox="0 0 940 320" role="img" aria-label="철근 간격에 따른 강도와 균열 한계"></svg>
+          </div>
+          <div class="card wide">
+            <h3>검토 결과</h3>
+            <p class="cap">KDS 24 10 11 4.6.2 와 KDS 24 14 21 4.2, 4.6.5 의 검토 항목.</p>
+            <div class="chips" id="d-checks" style="margin-bottom:4px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
   <footer>
     브라우저에서 파이썬을 돌릴 수 없으므로, 매개변수 격자 위의 해석 결과를 미리 계산해
     이 페이지에 담아 두었다. 계산은 <code>concreteproperties</code> 와
@@ -702,8 +790,9 @@ function stateChip(k, cls) {
 }
 
 /* ── 탭 ──────────────────────────────────────────────────── */
-const PANELS = { "tab-block": "panel-block", "tab-col": "panel-col", "tab-beam": "panel-beam" };
-const redrawAll = () => { drawBlock(); drawColumn(); drawBeam(); };
+const PANELS = { "tab-block": "panel-block", "tab-col": "panel-col",
+                 "tab-beam": "panel-beam", "tab-deck": "panel-deck" };
+const redrawAll = () => { drawBlock(); drawColumn(); drawBeam(); drawDeck(); };
 
 document.querySelectorAll('[role="tab"]').forEach(btn => {
   btn.addEventListener("click", () => {
@@ -1226,11 +1315,362 @@ function drawBeam() {
   }
 }
 
+
+/* ── 탭 4 · 바닥판 설계 (L4) ─────────────────────────────────
+   L1~L3 은 단면 요소망을 풀어야 해서 미리 계산한 격자를 쓴다. 바닥판은
+   설계식이 모두 닫힌 형태라 브라우저가 직접 푼다 — 격자가 없으므로
+   슬라이더를 어디에 두든 값이 정확하다. */
+const DECK = {
+  fck: 27, fy: 400,
+  fcd: 14.9175,        // 0.65 × 0.85 × 27
+  fyd: 360.0,          // 0.90 × 400
+  alpha: 0.797980,     // 포물선-직선을 수치적분한 등가블록 계수
+  beta: 0.411776,
+  P: 96,               // 윤하중 (kN) — KL-510 의 192 kN 축의 절반
+  im: 1.25,            // 충격 (표 4.4-1)
+  tMin: 220,           // 최소 두께 (4.6.5.1(5))
+  sMin: 100, sMax: 300,
+  gDC: 24.5, gDW: 22.5,
+  // 표 4.4-4 내구성 최소피복 + 4.4.4.2(5) 해수 추가분
+  cover: { E0: 20, EC1: 25, EC2: 35, EC4: 40, ED1: 45, ED2: 50, ED3: 55,
+           ES1: 45 + 5, ES2: 50 + 10, ES3: 55 + 15 },
+  exposures: ["E0", "EC1", "EC2", "EC4", "ED1", "ED2", "ED3", "ES1", "ES2", "ES3"],
+  dias: [10, 13, 16, 19, 22, 25],
+  // 표 4.2-4 / 표 4.2-5 (철근콘크리트 순수휨)
+  fsGrid: [160, 200, 240, 280, 320, 360],
+  maxDia: [32, 25, 16, 14, 10, 8],
+  maxSpc: [300, 250, 200, 150, 100, 50],
+};
+
+function deckInterp(fs, table) {
+  const g = DECK.fsGrid;
+  if (fs <= g[0]) return table[0];
+  for (let i = 0; i < g.length - 1; i++) {
+    if (fs <= g[i + 1]) {
+      const t = (fs - g[i]) / (g[i + 1] - g[i]);
+      return table[i] + t * (table[i + 1] - table[i]);
+    }
+  }
+  return 0;                       // 표의 상한(360 MPa)을 넘으면 쓸 수 없다
+}
+
+function deckSolve(o) {
+  const L = o.span;                                   // m
+  const tcMin = Math.max(o.dia, DECK.cover[o.exposure], 10);
+  const cover = tcMin + 10;                           // + 설계 편차 허용량
+  const d = o.t - cover - o.dia / 2;
+
+  const wDC = DECK.gDC * o.t / 1000;                  // kN/m²
+  const wDW = DECK.gDW * o.pav / 1000;
+  const mDC = wDC * L * L / 10;                       // 연속판 지간 (표 4.6-2)
+  const mDW = wDW * L * L / 10;
+  const mLL = (L + 0.6) * DECK.P / 9.6 * 0.8;         // 식 (4.6-1), 연속 0.8배
+  const mIM = mLL * (DECK.im - 1);
+
+  const mEd = 1.25 * mDC + 1.50 * mDW + 1.80 * (mLL + mIM);
+  const mSer = mDC + mDW + mLL + mIM;
+
+  const as = Math.PI * o.dia * o.dia / 4 * 1000 / o.sp;
+  const c = as * DECK.fyd / (DECK.alpha * DECK.fcd * 1000);
+  const mRd = d > 0 ? as * DECK.fyd * (d - DECK.beta * c) / 1e6 : 0;
+
+  // 필요 철근량 — 이차식의 근
+  const k = DECK.fyd / (DECK.alpha * DECK.fcd * 1000);
+  const qa = DECK.beta * k * DECK.fyd, qb = -DECK.fyd * d;
+  const disc = qb * qb - 4 * qa * mEd * 1e6;
+  const asReq = disc >= 0 ? (-qb - Math.sqrt(disc)) / (2 * qa) : NaN;
+  const asMin = Math.max(0.25 * Math.sqrt(DECK.fck) / DECK.fy, 1.4 / DECK.fy) * 1000 * d;
+
+  // 균열단면의 철근 응력 (탄성계수비 7)
+  const n = 7, rho = as / (1000 * d);
+  const kk = Math.sqrt((n * rho) ** 2 + 2 * n * rho) - n * rho;
+  const fs = d > 0 ? mSer * 1e6 / (as * (1 - kk / 3) * d) : Infinity;
+
+  const spcLimit = deckInterp(fs, DECK.maxSpc);
+  const diaLimit = deckInterp(fs, DECK.maxDia);
+
+  return { L, cover, d, wDC, wDW, mDC, mDW, mLL, mIM, mEd, mSer,
+           as, asReq, asMin, mRd, fs, spcLimit, diaLimit, c,
+           checks: {
+             "최소 두께 220 mm": o.t >= DECK.tMin,
+             "설계휨강도": mRd >= mEd,
+             "최소 철근량": as >= Math.min(asMin, 1.33 * asReq),
+             "철근 간격 100 mm 이상": o.sp >= DECK.sMin,
+             "철근 간격 300 mm·두께 이하": o.sp <= Math.min(DECK.sMax, o.t),
+             "균열 제어 (간격)": o.sp <= spcLimit,
+             "균열 제어 (지름)": o.dia <= diaLimit,
+           } };
+}
+
+const dSpan = bindRange2("d-span", v => (v / 100).toFixed(2) + " m", () => drawDeck());
+const dT    = bindRange2("d-t",    v => v.toFixed(0) + " mm",        () => drawDeck());
+const dDia  = bindRange2("d-dia",  i => "D" + DECK.dias[i],          () => drawDeck());
+const dSp   = bindRange2("d-sp",   v => v.toFixed(0) + " mm",        () => drawDeck());
+const dExp  = bindRange2("d-exp",  i => DECK.exposures[i],           () => drawDeck());
+const dPav  = bindRange2("d-pav",  v => v ? v.toFixed(0) + " mm" : "없음", () => drawDeck());
+
+/* 값 자체를 쓰는 슬라이더용 간단한 바인딩 (bindRange 는 목록 색인을 쓴다) */
+function bindRange2(id, fmt, onChange) {
+  const input = document.getElementById(id);
+  const out = document.getElementById(id + "-out");
+  const sync = () => { out.textContent = fmt(+input.value); onChange(); };
+  input.addEventListener("input", sync);
+  return { input, sync, get: () => +input.value };
+}
+
+function deckState() {
+  return {
+    span: dSpan.get() / 100,
+    t: dT.get(),
+    dia: DECK.dias[dDia.get()],
+    sp: dSp.get(),
+    exposure: DECK.exposures[dExp.get()],
+    pav: dPav.get(),
+  };
+}
+
+function drawDeck() {
+  const o = deckState();
+  const r = deckSolve(o);
+
+  /* 요약 칩 */
+  document.getElementById("d-chips").innerHTML =
+    chip("지간 L", r.L.toFixed(2), "m") +
+    chip("공칭피복", r.cover.toFixed(0), "mm") +
+    chip("유효깊이 d", r.d.toFixed(0), "mm") +
+    chip("M<sub>Ed</sub>", r.mEd.toFixed(1), "kN·m/m") +
+    chip("M<sub>Rd</sub>", r.mRd.toFixed(1), "kN·m/m") +
+    chip("A<sub>s</sub> 배치", r.as.toFixed(0), "mm²/m") +
+    chip("A<sub>s</sub> 필요", isFinite(r.asReq) ? r.asReq.toFixed(0) : "—", "mm²/m") +
+    chip("f<sub>s</sub>", isFinite(r.fs) ? r.fs.toFixed(0) : "—", "MPa");
+
+  /* 검토 항목 */
+  document.getElementById("d-checks").innerHTML = Object.entries(r.checks)
+    .map(([k, ok]) => `<div class="chip state" data-cls="${ok ? "인장지배단면" : "압축지배단면"}">` +
+                      `<span class="k">${k}</span><span class="v">${ok ? "만족" : "불만족"}</span></div>`)
+    .join("");
+
+  drawDeckSection(o, r);
+  drawDeckBars(o, r);
+  drawDeckSweep(o, r);
+}
+
+function drawDeckSection(o, r) {
+  const svg = document.getElementById("d-sec");
+  svg.innerHTML = "";
+  const W = 460, H = 290, m = { l: 60, r: 24, t: 26, b: 34 };
+  const pw = W - m.l - m.r, ph = H - m.t - m.b;
+
+  // 세로 축척은 최대 두께(400 mm)에 맞춰 고정한다 — 두께 변화가 눈에 보이도록
+  const scale = ph / 420;
+  const th = o.t * scale;
+  const y0 = m.t + (ph - th) / 2;
+
+  const grey = CSSVAR("--muted"), ink = CSSVAR("--fg");
+  const steel = CSSVAR("--tens");
+
+  // 포장
+  if (o.pav > 0) {
+    svg.appendChild(el("rect", { x: m.l, y: y0 - o.pav * scale, width: pw,
+                                 height: o.pav * scale, fill: grey, opacity: 0.28 }));
+    svg.appendChild(el("text", { x: m.l + pw / 2, y: y0 - o.pav * scale / 2 + 4,
+                                 "text-anchor": "middle", fill: ink, "font-size": 11 },
+                                `포장 ${o.pav} mm`));
+  }
+
+  // 바닥판
+  svg.appendChild(el("rect", { x: m.l, y: y0, width: pw, height: th,
+                               fill: grey, opacity: 0.12, stroke: ink, "stroke-width": 1.2 }));
+
+  // 철근 — 1 m 폭에 배치되는 개수를 실제 간격대로
+  const nBar = Math.max(2, Math.floor(1000 / o.sp) + 1);
+  const yBar = y0 + th - r.cover * scale - o.dia / 2 * scale;
+  const step = pw / (nBar - 1);
+  for (let i = 0; i < nBar; i++) {
+    svg.appendChild(el("circle", { cx: m.l + i * step, cy: yBar,
+                                   r: Math.max(2.4, o.dia * scale / 2), fill: steel }));
+  }
+
+  // 유효깊이 화살표
+  const xd = m.l + 26;
+  svg.appendChild(el("line", { x1: xd, y1: y0, x2: xd, y2: yBar,
+                               stroke: ink, "stroke-width": 1, "stroke-dasharray": "3 3" }));
+  svg.appendChild(el("text", { x: xd - 6, y: (y0 + yBar) / 2 + 4, "text-anchor": "end",
+                               fill: ink, "font-size": 11 }, `d = ${r.d.toFixed(0)}`));
+
+  // 피복
+  svg.appendChild(el("line", { x1: m.l + pw - 26, y1: yBar, x2: m.l + pw - 26, y2: y0 + th,
+                               stroke: steel, "stroke-width": 1 }));
+  svg.appendChild(el("text", { x: m.l + pw - 20, y: (yBar + y0 + th) / 2 + 4,
+                               fill: steel, "font-size": 11 }, `${r.cover.toFixed(0)}`));
+
+  svg.appendChild(el("text", { x: m.l + pw / 2, y: y0 + th + 20, "text-anchor": "middle",
+                               fill: ink, "font-size": 11.5 },
+                              `t = ${o.t} mm · ${o.exposure} · D${o.dia}@${o.sp}`));
+  svg.appendChild(el("text", { x: m.l, y: m.t - 8, fill: grey, "font-size": 11 },
+                              "1 m 폭 띠판 (압축연단이 위)"));
+}
+
+function drawDeckBars(o, r) {
+  const svg = document.getElementById("d-bars");
+  svg.innerHTML = "";
+  const W = 460, H = 290, m = { l: 54, r: 18, t: 24, b: 48 };
+  const pw = W - m.l - m.r, ph = H - m.t - m.b;
+  const top = Math.max(r.mEd, r.mRd, 40) * 1.15;
+  const Y = v => m.t + ph - v / top * ph;
+  const ink = CSSVAR("--fg"), grey = CSSVAR("--muted");
+
+  // 축
+  svg.appendChild(el("line", { x1: m.l, y1: m.t, x2: m.l, y2: m.t + ph, stroke: grey }));
+  svg.appendChild(el("line", { x1: m.l, y1: m.t + ph, x2: m.l + pw, y2: m.t + ph, stroke: grey }));
+  for (let i = 0; i <= 4; i++) {
+    const v = top * i / 4;
+    svg.appendChild(el("line", { x1: m.l, y1: Y(v), x2: m.l + pw, y2: Y(v),
+                                 stroke: grey, opacity: 0.22 }));
+    svg.appendChild(el("text", { x: m.l - 7, y: Y(v) + 4, "text-anchor": "end",
+                                 fill: grey, "font-size": 10.5 }, v.toFixed(0)));
+  }
+
+  // 누적 막대 — M_Ed 의 구성
+  const bw = 62, x1 = m.l + pw * 0.22 - bw / 2, x2 = m.l + pw * 0.68 - bw / 2;
+  const parts = [
+    ["고정 DC", 1.25 * r.mDC, CSSVAR("--muted")],
+    ["고정 DW", 1.50 * r.mDW, CSSVAR("--tran")],
+    ["활하중+충격", 1.80 * (r.mLL + r.mIM), CSSVAR("--comp")],
+  ];
+  svg.appendChild(el("line", { x1: m.l, y1: Y(r.mEd), x2: m.l + pw, y2: Y(r.mEd),
+                               stroke: ink, "stroke-width": 1.4, "stroke-dasharray": "5 4",
+                               opacity: 0.55 }));
+  let acc = 0;
+  parts.forEach(([lab, v, col]) => {
+    svg.appendChild(el("rect", { x: x1, y: Y(acc + v), width: bw,
+                                 height: Y(acc) - Y(acc + v), fill: col, opacity: 0.85 }));
+    if (Y(acc) - Y(acc + v) > 18) {
+      svg.appendChild(el("text", { x: x1 + bw / 2, y: (Y(acc) + Y(acc + v)) / 2 + 4,
+                                   "text-anchor": "middle", fill: "#fff",
+                                   "font-size": 11.5, "font-weight": 600 }, v.toFixed(1)));
+    }
+    acc += v;
+  });
+
+  const okCol = r.mRd >= r.mEd ? CSSVAR("--tens") : CSSVAR("--comp");
+  svg.appendChild(el("rect", { x: x2, y: Y(r.mRd), width: bw, height: Y(0) - Y(r.mRd),
+                               fill: okCol, opacity: 0.85 }));
+  svg.appendChild(el("text", { x: x2 + bw / 2, y: Y(r.mRd) - 7, "text-anchor": "middle",
+                               fill: okCol, class: "num" }, r.mRd.toFixed(1)));
+
+  svg.appendChild(el("line", { x1: m.l, y1: Y(r.mEd), x2: m.l + pw, y2: Y(r.mEd),
+                               stroke: ink, "stroke-width": 1.4, "stroke-dasharray": "5 4" }));
+  svg.appendChild(el("text", { x: m.l + pw - 4, y: Y(r.mEd) - 6, "text-anchor": "end",
+                               fill: ink, "font-size": 11 }, `M_Ed ${r.mEd.toFixed(1)}`));
+
+  svg.appendChild(el("text", { x: x1 + bw / 2, y: m.t + ph + 18, "text-anchor": "middle",
+                               fill: ink, "font-size": 11.5 }, "설계 M_Ed"));
+  svg.appendChild(el("text", { x: x2 + bw / 2, y: m.t + ph + 18, "text-anchor": "middle",
+                               fill: ink, "font-size": 11.5 }, "설계 M_Rd"));
+
+  const share = (r.mLL + r.mIM) / (r.mDC + r.mDW + r.mLL + r.mIM) * 100;
+  svg.appendChild(el("text", { x: m.l, y: m.t + ph + 38, fill: grey, "font-size": 11 },
+                              `계수 전 활하중의 몫 ${share.toFixed(0)} %`));
+}
+
+function drawDeckSweep(o, r) {
+  const svg = document.getElementById("d-sweep");
+  svg.innerHTML = "";
+  const W = 940, H = 320, m = { l: 58, r: 150, t: 24, b: 46 };
+  const pw = W - m.l - m.r, ph = H - m.t - m.b;
+  const grey = CSSVAR("--muted"), ink = CSSVAR("--fg");
+
+  const lo = 80, hi = 320;
+  const pts = [];
+  for (let s = lo; s <= hi; s += 2) pts.push({ s, r: deckSolve({ ...o, sp: s }) });
+  const top = Math.max(...pts.map(p => p.r.mRd), r.mEd) * 1.1;
+
+  const X = s => m.l + (s - lo) / (hi - lo) * pw;
+  const Y = v => m.t + ph - v / top * ph;
+
+  svg.appendChild(el("line", { x1: m.l, y1: m.t + ph, x2: m.l + pw, y2: m.t + ph, stroke: grey }));
+  svg.appendChild(el("line", { x1: m.l, y1: m.t, x2: m.l, y2: m.t + ph, stroke: grey }));
+  for (let s = 100; s <= hi; s += 50) {
+    svg.appendChild(el("line", { x1: X(s), y1: m.t, x2: X(s), y2: m.t + ph,
+                                 stroke: grey, opacity: 0.2 }));
+    svg.appendChild(el("text", { x: X(s), y: m.t + ph + 17, "text-anchor": "middle",
+                                 fill: grey, "font-size": 10.5 }, s));
+  }
+  for (let i = 0; i <= 4; i++) {
+    const v = top * i / 4;
+    svg.appendChild(el("line", { x1: m.l, y1: Y(v), x2: m.l + pw, y2: Y(v),
+                                 stroke: grey, opacity: 0.2 }));
+    svg.appendChild(el("text", { x: m.l - 7, y: Y(v) + 4, "text-anchor": "end",
+                                 fill: grey, "font-size": 10.5 }, v.toFixed(0)));
+  }
+
+  svg.appendChild(path(pts.map(p => [X(p.s), Y(p.r.mRd)]),
+                       { stroke: CSSVAR("--tens"), "stroke-width": 2.2 }));
+  svg.appendChild(el("line", { x1: m.l, y1: Y(r.mEd), x2: m.l + pw, y2: Y(r.mEd),
+                               stroke: ink, "stroke-width": 1.6, "stroke-dasharray": "6 4" }));
+
+  // 강도·균열 한계 간격
+  const cross = key => {
+    for (let i = 0; i < pts.length - 1; i++) {
+      const g0 = key(pts[i]), g1 = key(pts[i + 1]);
+      if (g0 >= 0 && g1 <= 0) return pts[i].s + 2 * g0 / (g0 - g1);
+    }
+    return null;
+  };
+  const sStr = cross(p => p.r.mRd - r.mEd);
+  const sCrk = cross(p => p.r.spcLimit - p.s);
+  const sDia = cross(p => p.r.diaLimit - o.dia);
+
+  const marks = [
+    [sStr, CSSVAR("--tens"), "강도"],
+    [sCrk, CSSVAR("--tran"), "균열 (간격)"],
+    [sDia, CSSVAR("--comp"), "균열 (지름)"],
+  ].filter(([v]) => v !== null);
+
+  marks.forEach(([v, col, lab]) => {
+    svg.appendChild(el("line", { x1: X(v), y1: m.t, x2: X(v), y2: m.t + ph,
+                                 stroke: col, "stroke-width": 1.3, "stroke-dasharray": "3 3" }));
+    svg.appendChild(el("text", { x: X(v) - 5, y: m.t + 14, "text-anchor": "end",
+                                 fill: col, "font-size": 10.5,
+                                 transform: `rotate(-90 ${X(v) - 5} ${m.t + 14})` },
+                                `${lab} ${v.toFixed(0)}`));
+  });
+
+  // 현재 간격
+  svg.appendChild(el("circle", { cx: X(o.sp), cy: Y(r.mRd), r: 5,
+                                 fill: CSSVAR("--tens"), stroke: CSSVAR("--bg"), "stroke-width": 2 }));
+
+  // 범례
+  const lx = m.l + pw + 16;
+  let ly = m.t + 10;
+  const leg = (col, txt, dash) => {
+    svg.appendChild(el("line", { x1: lx, y1: ly - 4, x2: lx + 22, y2: ly - 4, stroke: col,
+                                 "stroke-width": 2.2, "stroke-dasharray": dash || "" }));
+    svg.appendChild(el("text", { x: lx + 28, y: ly, fill: ink, "font-size": 11 }, txt));
+    ly += 20;
+  };
+  leg(CSSVAR("--tens"), "M_Rd");
+  leg(ink, "M_Ed", "6 4");
+  marks.forEach(([v, col, lab]) => leg(col, `${lab} ${v.toFixed(0)} mm`, "3 3"));
+
+  const governing = marks.length
+    ? marks.reduce((a, b) => (a[0] <= b[0] ? a : b))[2]
+    : "—";
+  svg.appendChild(el("text", { x: lx, y: ly + 10, fill: grey, "font-size": 11 }, "먼저 걸리는 것"));
+  svg.appendChild(el("text", { x: lx, y: ly + 27, fill: ink, "font-size": 13, "font-weight": 600 },
+                              governing));
+
+  svg.appendChild(el("text", { x: m.l + pw / 2, y: H - 8, "text-anchor": "middle",
+                               fill: grey, "font-size": 11 }, "주철근 간격 (mm)"));
+}
+
 /* ── 시작 ────────────────────────────────────────────────── */
 kFck.set(27); kFy.set(400); kFck.sync(); kFy.sync();
 cFck.set(27); cFy.set(400); cFck.sync(); cFy.sync();
 bFck.set(27); bFy.set(400); bN.set(4); bD.set(600);
 bFck.sync(); bFy.sync(); bN.sync(); bD.sync();
+dSpan.sync(); dT.sync(); dDia.sync(); dSp.sync(); dExp.sync(); dPav.sync();
 redrawAll();
 
 const mq = window.matchMedia("(prefers-color-scheme: dark)");

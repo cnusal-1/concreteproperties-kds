@@ -1518,7 +1518,835 @@ def nb_l3_params():
     ], directory=LECTURES)
 
 
-BUILDERS = [nb_l1_block, nb_l2_phi, nb_l3_params]
+
+
+# ══════════════════════════════════════════════════════════════════════════
+DECK_SETUP = r'''
+from concreteproperties_kds.kds import stress_block_parameters
+from concreteproperties_kds.kds24 import (
+    BAR_SPACING_MAX,
+    BAR_SPACING_MIN,
+    MIN_THICKNESS_RC,
+    WHEEL_LOAD,
+    bar_area,
+    cantilever_live_load_moment,
+    dead_load_moment,
+    deck_span,
+    design_compressive_strength,
+    design_deck,
+    design_yield_strength,
+    distribution_steel_ratio,
+    equivalent_block,
+    impact_factor,
+    live_load_moment,
+    max_bar_diameter,
+    max_bar_spacing,
+    minimum_flexural_steel,
+    nominal_cover,
+    provided_steel_area,
+    required_steel_area,
+)
+
+# 기준 조건 — 앞으로 이 값을 하나씩 바꿔 가며 비교한다
+BASE = dict(
+    girder_spacing=2.5,   # 거더 중심 간격 (m)   ← 바꿔 보라
+    thickness=240.0,      # 바닥판 두께 (mm)     ← 바꿔 보라
+    bar_diameter=16.0,    # 주철근 지름 (mm)     ← 바꿔 보라
+    bar_spacing=150.0,    # 주철근 간격 (mm)     ← 바꿔 보라
+    exposure="EC1",       # 노출등급             ← 바꿔 보라
+    pavement=80.0,        # 포장 두께 (mm)       ← 바꿔 보라
+)
+
+C_DEAD = "#5b6472"
+C_LIVE = "#1f6feb"
+C_CAP = "#1f7a4d"
+C_K14 = "#b3372c"
+
+print("바닥판 설계 함수를 불러왔다.")
+print(f"윤하중 P = {WHEEL_LOAD:.0f} kN   (KL-510 의 192 kN 축의 절반)")
+'''
+
+L14_DEF = r'''
+def required_steel_kds14(m_u, d, fck=27.0, fy=400.0, b=1000.0, phi=0.85):
+    """같은 설계휨모멘트를 KDS 14 강도설계법으로 풀어 필요 철근량을 구한다.
+
+    등가직사각형 응력블록으로 단철근 단면의 평형을 푼다.
+
+        phi*As*fy*(d - a/2) = M_u,   a = As*fy / (eta*0.85*fck*b)
+    """
+    _, eta, _ = stress_block_parameters(fck=fck)
+    k = fy / (eta * 0.85 * fck * b)
+    # (phi*k*fy/2) As^2 - phi*fy*d*As + M_u = 0
+    a2 = phi * k * fy / 2.0
+    a1 = -phi * fy * d
+    disc = a1**2 - 4 * a2 * m_u
+    if disc < 0:
+        raise ValueError("단철근으로는 저항할 수 없다")
+    return (-a1 - (disc) ** 0.5) / (2 * a2)
+
+
+print("KDS 14 대조용 함수를 정의했다.")
+'''
+
+
+def nb_l4_deck():
+    """강의 L4 - 바닥판은 왜 따로 설계하는가."""
+    return write("L4_바닥판설계", [
+        md(r"""
+        # L4 · 바닥판 — 트럭을 굴리지 않고 푸는 법
+
+        ## 이 시간에 답할 질문
+
+        거더는 KL-510 트럭을 다리 위로 굴려 가며 최대 단면력을 찾는다. 그런데
+        **바닥판은 그렇게 풀지 않는다.** 기준은 식 한 줄을 준다.
+
+        $$
+        M_t = \frac{(L + 0.6)\,P}{9.6}
+        \qquad [\text{kN} \cdot \text{m/m}]
+        $$
+
+        여기서 $L$ 은 거더 간격, $P$ 는 윤하중 96 kN 이다. **트럭의 위치도,
+        축간거리도, 다차로 재하계수도 나오지 않는다.**
+
+        1. 왜 바닥판만 이렇게 간단한가?
+        2. 이 식은 무엇을 이미 삼키고 있는가?
+        3. 바닥판을 두껍게 하면 정말 안전해지는가?
+        4. 강도가 아니라 **균열**이 설계를 지배하는 순간은 언제인가?
+
+        ## 근거 조문
+
+        | 내용 | 조문 |
+        |---|---|
+        | 바닥판의 지간 | KDS 24 10 11 4.6.2.3 |
+        | 활하중 휨모멘트 식 $(4.6\text{-}1)$ | KDS 24 10 11 4.6.2.4 |
+        | 캔틸레버 식 $(4.6\text{-}4)$ | KDS 24 10 11 4.6.2.5 |
+        | 고정하중 휨모멘트 표 4.6-2 | KDS 24 10 11 4.6.2.7 |
+        | 전단 검토 생략 | KDS 24 10 11 4.6.2.2(3) |
+        | 최소 두께 220 mm, 처짐 한계 | KDS 24 14 21 4.6.5.1 |
+        | 경험적 설계법 | KDS 24 14 21 4.6.5.2 |
+        | 배력철근 $120/\sqrt{L} \le 67\,\%$ | KDS 24 14 21 4.6.5.3(2) |
+        | 피복두께 식 $(4.4\text{-}1)$, 표 4.4-4 | KDS 24 14 21 4.4.4 |
+        | 균열 제어 표 4.2-5 | KDS 24 14 21 4.2.3.3 |
+        """, EXPLORER_NOTE),
+
+        md("""
+        ## 0. 준비
+
+        **아래 코드가 하는 일** — 한글 글꼴을 등록하고 그림 색을 정한다.
+        """),
+        code(SETUP),
+
+        md(r"""
+        **아래 코드가 하는 일** — 바닥판 설계 함수를 불러오고 기준 조건을
+        정한다. 거더 간격 2.5 m, 두께 240 mm, D16@150, 노출등급 EC1,
+        포장 80 mm 의 전형적인 거더교 바닥판이다.
+        """),
+        code(DECK_SETUP),
+
+        md(r"""
+        ## 1. 바닥판은 왜 따로 다루는가
+
+        거더는 **선부재**다. 한 방향으로 길고, 단면력이 한 축을 따라 흐른다.
+        그래서 트럭을 굴려 영향선의 최대값을 찾는 것이 자연스럽다.
+
+        바닥판은 **판**이다. 윤하중 한 개가 실리면 힘은 사방으로 퍼지고,
+        거더 사이에서 아치처럼 버티기도 한다. 이것을 정직하게 풀려면 판 해석을
+        해야 하는데, 다리 하나에 바닥판 단면은 수백 개다.
+
+        그래서 기준은 **실물 실험으로 보정한 근사식**을 준다. 이 식들은
+        이미 다음을 삼키고 있다.
+
+        - 윤하중이 폭 방향으로 퍼지는 효과
+        - 판의 2방향 거동
+        - 인접 윤하중의 겹침
+
+        그래서 **전단은 검토하지 않아도 된다**(4.6.2.2(3)). 근사식 자체가
+        전단이 문제되지 않는 두께 범위에서 보정되었기 때문이다. 다만 윤하중의
+        **뚫림전단**은 별개라 따로 본다(KDS 24 14 21 4.6.5.1(8)).
+
+        > **설계의 의도** — 바닥판 설계식의 단순함은 게으름이 아니라 **판단의
+        > 결과**다. 수백 개 단면을 정밀해석하는 비용보다, 보수적으로 보정된
+        > 식 한 줄이 낫다고 본 것이다. 대신 그 식이 성립하는 범위(두께,
+        > 지간, 연속성)를 상세 규정으로 꽉 조인다.
+
+        **아래 코드가 하는 일** — 기준 조건의 바닥판을 한 번 풀어 전체 그림을
+        본다.
+        """),
+        code("""
+        base = design_deck(**BASE)
+
+        print(f"바닥판 지간 L      {base.span:.2f} m")
+        print(f"두께 t             {base.thickness:.0f} mm")
+        print(f"공칭피복 t_c,nom   {base.cover:.0f} mm")
+        print(f"유효깊이 d         {base.d:.0f} mm")
+        print()
+        print(f"고정하중 휨모멘트   {base.m_dead:6.2f} kN·m/m")
+        print(f"활하중 휨모멘트     {base.m_live:6.2f} kN·m/m  (충격 25 % 포함)")
+        print(f"설계휨모멘트 M_Ed   {base.m_ed:6.2f} kN·m/m  (극한 I)")
+        print()
+        print(f"필요 철근량 As,req  {base.as_required:6.0f} mm²/m")
+        print(f"최소 철근량 As,min  {base.as_minimum:6.0f} mm²/m")
+        print(f"배치 철근량 As      {base.as_provided:6.0f} mm²/m  (D16@150)")
+        print(f"설계휨강도 M_Rd     {base.m_rd:6.2f} kN·m/m")
+        print()
+        for name, ok in base.checks.items():
+            print(f"  {'만족' if ok else '불만족'}  {name}")
+        """),
+
+        md(r"""
+        ## 2. 지간 — 거더 간격이 모든 것을 정한다
+
+        바닥판 설계에서 **설계자가 고르지 못하는 변수**가 하나 있다. 거더
+        간격이다. 그것은 상부구조 계획 단계에서 이미 정해진다.
+
+        기준은 지간을 지지보의 **중심 간격**으로 잡되, 순 지간에 바닥판 두께를
+        더한 값을 넘길 필요는 없다고 한다(4.6.2.3(1)). PSC 거더처럼 상부플랜지가
+        넓으면 중심 간격이 실제보다 훨씬 불리해지기 때문이다.
+
+        **아래 코드가 하는 일** — 거더 폭이 지간에 어떻게 반영되는지 본다.
+        """),
+        code("""
+        for web in (0.0, 0.15, 0.40, 0.60, 1.00):
+            L = deck_span(girder_spacing=2.5, thickness=240, web_width=web)
+            note = "중심 간격" if L == 2.5 else "순 지간 + 두께"
+            label = "미고려" if web == 0 else f"{web:.2f} m"
+            print(f"거더 폭 {label:>8}  →  지간 {L:.3f} m   ({note})")
+        """),
+
+        md(r"""
+        **아래 코드가 하는 일** — 거더 간격을 바꿔 가며 고정하중·활하중·설계
+        휨모멘트가 어떻게 갈라지는지 그린다.
+        """),
+        code("""
+        spans = np.linspace(1.5, 4.5, 61)
+        rows = [design_deck(**{**BASE, "girder_spacing": s}) for s in spans]
+
+        fig, (ax, bx) = plt.subplots(1, 2, figsize=(11, 4.2))
+
+        ax.plot(spans, [r.m_dead for r in rows], color=C_DEAD, lw=2, label="고정하중")
+        ax.plot(spans, [r.m_live for r in rows], color=C_LIVE, lw=2, label="활하중 + 충격")
+        ax.plot(spans, [r.m_ed for r in rows], color="k", lw=2.4, label="설계 M$_{Ed}$ (극한 I)")
+        ax.axvline(2.5, color="k", ls=":", lw=1)
+        ax.set_xlabel("거더 중심 간격 (m)")
+        ax.set_ylabel("휨모멘트 (kN·m/m)")
+        ax.set_title("거더 간격이 커지면 무엇이 커지는가")
+        ax.legend(fontsize=9)
+
+        share = [r.m_live / (r.m_dead + r.m_live) * 100 for r in rows]
+        bx.plot(spans, share, color=C_LIVE, lw=2)
+        bx.axvline(2.5, color="k", ls=":", lw=1)
+        bx.set_xlabel("거더 중심 간격 (m)")
+        bx.set_ylabel("전체 중 활하중의 몫 (%)")
+        bx.set_title("바닥판은 끝까지 활하중이 지배한다")
+        bx.set_ylim(0, 100)
+        """),
+
+        md(r"""
+        오른쪽 그림이 바닥판과 거더의 결정적인 차이를 보여 준다. 거더는 지간이
+        길어질수록 자중이 커져 고정하중이 지배해 가지만, **바닥판은 어떤 간격에서도
+        활하중이 80 % 를 넘는다.** 고정하중은 $L^2$ 로, 활하중은 $L$ 에 비례해
+        커지는데도 그렇다 — 애초에 활하중 쪽 절대값이 훨씬 크기 때문이다.
+
+        > **설계의 의도** — 이것이 바닥판을 피로와 내구성 관점에서 다뤄야 하는
+        > 이유다. 하중의 대부분이 **반복해서 실렸다 빠지는** 하중이다. 콘크리트
+        > 바닥판의 피로한계상태 검증을 면제해 주는 대신
+        > (KDS 24 14 21 4.6.5.1(3)), 최소 두께·최소 철근량·균열폭을 빡빡하게
+        > 묶는 것으로 갈음한다.
+        """),
+
+        md(r"""
+        ## 3. 활하중 — 식 하나에 무엇이 들어 있나
+
+        식 $(4.6\text{-}1)$ 을 뜯어 보자.
+
+        $$
+        M_t = \frac{(L + 0.6) P}{9.6}
+        $$
+
+        $L$ 이 지간이니 $M \propto L$ 이다. 그런데 단순보에 집중하중 하나가
+        중앙에 놓이면 $M = PL/4$ 다. 두 식의 비를 보면 이 식이 무엇을 하고
+        있는지 드러난다.
+
+        **아래 코드가 하는 일** — 기준식과 "윤하중 하나가 중앙에 놓인 단순보"를
+        견준다.
+        """),
+        code("""
+        print(f"{'지간':>6}  {'기준식':>9}  {'PL/4':>9}  {'비':>6}  {'등가 분포폭':>10}")
+        for L in (1.5, 2.0, 2.5, 3.0, 3.6, 4.5):
+            m_code = live_load_moment(span=L)
+            m_point = WHEEL_LOAD * L / 4.0
+            print(f"{L:5.1f} m  {m_code:7.1f}  {m_point:7.1f}  "
+                  f"{m_code / m_point:5.2f}  {m_point / m_code:8.2f} m")
+        """),
+
+        md(r"""
+        마지막 열이 핵심이다. 기준식은 **윤하중이 폭 1.7 ~ 2.1 m 에 퍼진 것과
+        같은 효과**를 준다. 실제 타이어 접지폭은 30 cm 남짓인데도 그렇다.
+
+        그 차이가 판의 2방향 거동이다. 윤하중은 지간방향으로만 흐르지 않고
+        옆으로도 퍼진다. 기준식은 그 퍼짐을 **등가 띠의 폭**으로 환산해 놓은
+        것이다.
+
+        지간이 길어질수록 폭이 조금씩 넓어지다 2.1 m 근처로 수렴하는데, 이 값이
+        우연이 아니다. 주철근이 차량진행방향에 **평행**한 경우의 분포폭
+        $E = 1.2 + 0.06L$ 도 정확히 **2.1 m 에서 상한이 걸린다**(식
+        $(4.6\\text{-}2)$). 두 식이 서로 다른 형태로 같은 물리적 상한 —
+        하나의 윤하중이 퍼질 수 있는 최대 폭 — 을 담고 있는 셈이다.
+
+        여기에 두 가지 보정이 더 붙는다.
+
+        - **연속판 0.8배** — 3지점 이상이면 정모멘트가 20 % 준다(4.6.2.4(2)①나).
+        - **충격 1.25배** — 표준트럭하중에만 적용한다(KDS 24 12 21 표 4.4-1).
+
+        **아래 코드가 하는 일** — 두 보정이 각각 얼마나 움직이는지 본다.
+        """),
+        code("""
+        L = BASE["girder_spacing"]
+        m_simple = live_load_moment(span=L)
+        m_cont = live_load_moment(span=L, continuous=True)
+        im = impact_factor()
+
+        print(f"단순판           {m_simple:6.2f} kN·m/m")
+        print(f"연속판 (× 0.8)   {m_cont:6.2f} kN·m/m")
+        print(f"충격 (× {im:.2f})    {m_cont * im:6.2f} kN·m/m   ← 설계에 쓰는 값")
+        print()
+        print(f"두 보정을 합치면 단순판 대비 {m_cont * im / m_simple:.3f} 배")
+        print("연속으로 만들어 20 % 벌고, 충격으로 25 % 잃는다 — 거의 상쇄된다.")
+        """),
+
+        md(r"""
+        ### 캔틸레버는 다르다
+
+        내민 바닥판에서는 윤하중이 지지점에서 $X$ 만큼 떨어져 실린다. 분포폭은
+        $E = 0.8X + 1.14$ 로 **$X$ 와 함께 넓어진다**(식 $(4.6\text{-}4)$).
+
+        $$
+        M = \frac{P}{E} X = \frac{P X}{0.8 X + 1.14}
+        $$
+
+        분자와 분모가 함께 커지므로 모멘트가 $X$ 에 비례하지 않는다. 내밀수록
+        불리하지만, 생각만큼은 아니다.
+
+        **아래 코드가 하는 일** — 캔틸레버 길이에 따른 활하중·고정하중 모멘트를
+        견준다.
+        """),
+        code("""
+        xs = np.linspace(0.3, 2.5, 45)
+        w_dc = 24.5 * BASE["thickness"] / 1000 + 22.5 * BASE["pavement"] / 1000
+        m_live_c = [cantilever_live_load_moment(x=x) for x in xs]
+        m_dead_c = [abs(dead_load_moment(w=w_dc, span=x, kind="캔틸레버판")) for x in xs]
+
+        fig, ax = plt.subplots(figsize=(6.6, 4.2))
+        ax.plot(xs, m_live_c, color=C_LIVE, lw=2, label="활하중 (식 4.6-4)")
+        ax.plot(xs, [WHEEL_LOAD * x / 1.14 for x in xs], color=C_LIVE, lw=1,
+                ls=":", label="분포폭이 안 넓어진다면")
+        ax.plot(xs, m_dead_c, color=C_DEAD, lw=2, label="고정하중 (wX²/2)")
+        ax.set_xlabel("지지점에서 하중점까지의 거리 X (m)")
+        ax.set_ylabel("휨모멘트 (kN·m/m)")
+        ax.set_title("캔틸레버 — 분포폭이 함께 넓어진다")
+        ax.legend(fontsize=9)
+        """),
+
+        md(r"""
+        ## 4. 두께의 두 얼굴
+
+        학생들이 가장 자주 하는 실수가 여기 있다. **"모자라니 두껍게 하자."**
+
+        두께를 키우면 유효깊이 $d$ 가 커져 강도가 오른다. 그런데 동시에
+        **자중도 커진다.** $M_{dead} \propto t$ 이고 $M_{Rd} \propto d \approx t$
+        이므로 둘 다 1차로 늘어난다. 어느 쪽이 이길까?
+
+        **아래 코드가 하는 일** — 두께를 200 ~ 400 mm 로 바꾸며 설계휨모멘트와
+        설계휨강도를 함께 그린다.
+        """),
+        code("""
+        ts = np.linspace(200, 400, 81)
+        rows = [design_deck(**{**BASE, "thickness": t}) for t in ts]
+
+        fig, (ax, bx) = plt.subplots(1, 2, figsize=(11, 4.2))
+
+        ax.plot(ts, [r.m_ed for r in rows], color="k", lw=2, label="설계 M$_{Ed}$")
+        ax.plot(ts, [r.m_rd for r in rows], color=C_CAP, lw=2, label="설계 M$_{Rd}$ (D16@150)")
+        ax.plot(ts, [r.m_dead for r in rows], color=C_DEAD, lw=1.6, ls="--", label="고정하중 몫")
+        ax.axvline(MIN_THICKNESS_RC, color=C_K14, ls=":", lw=1.4)
+        ax.text(MIN_THICKNESS_RC + 4, ax.get_ylim()[1] * 0.05, "최소 220 mm",
+                color=C_K14, fontsize=9)
+        ax.set_xlabel("바닥판 두께 t (mm)")
+        ax.set_ylabel("휨모멘트 (kN·m/m)")
+        ax.set_title("두께를 키우면")
+        ax.legend(fontsize=9)
+
+        margin = [r.m_rd - r.m_ed for r in rows]
+        bx.plot(ts, margin, color=C_CAP, lw=2)
+        bx.axhline(0, color="k", lw=0.9)
+        bx.set_xlabel("바닥판 두께 t (mm)")
+        bx.set_ylabel("M$_{Rd}$ - M$_{Ed}$ (kN·m/m)")
+        bx.set_title("여유는 계속 늘지만 기울기가 완만해진다")
+        """),
+
+        md(r"""
+        강도가 이긴다 — 두껍게 하면 여유가 는다. 그런데 **얼마나** 이기는지가
+        보를 다룰 때(L3)와 사뭇 다르다.
+
+        **아래 코드가 하는 일** — 두께 10 % 를 올렸을 때와 철근량을 10 % 더
+        넣었을 때의 여유 증가를 견주고, 두께가 데려온 자중이 그 이득에서
+        얼마를 도로 가져가는지 계산한다.
+        """),
+        code("""
+        b0 = design_deck(**BASE)
+        thicker = design_deck(**{**BASE, "thickness": BASE["thickness"] * 1.1})
+        more_bar = design_deck(**{**BASE, "bar_spacing": BASE["bar_spacing"] / 1.1})
+
+        for label, r in (("기준", b0), ("두께 +10 %", thicker), ("철근량 +10 %", more_bar)):
+            gain = (r.m_rd - r.m_ed) - (b0.m_rd - b0.m_ed)
+            print(f"{label:>13}   M_Rd {r.m_rd:6.2f}   M_Ed {r.m_ed:6.2f}   "
+                  f"여유 {r.m_rd - r.m_ed:6.2f}  ({gain:+5.2f})")
+
+        print()
+        d_cap = thicker.m_rd - b0.m_rd
+        d_dem = thicker.m_ed - b0.m_ed
+        print(f"두께 +10 % 를 뜯어보면")
+        print(f"   강도가 {d_cap:+.2f}, 하중이 {d_dem:+.2f} 만큼 늘어")
+        print(f"   자중이 이득의 {d_dem / d_cap * 100:.0f} % 만 가져갔다.")
+        """),
+
+        md(r"""
+        **자중이 가져간 몫은 4 % 뿐이다.** 두께를 10 % 키우면 강도가
+        11.58 kN·m/m 오르는데 하중은 0.46 kN·m/m 밖에 늘지 않는다.
+
+        보에서라면 이렇게 되지 않는다. 보는 자중이 하중의 큰 몫을 차지하므로
+        단면을 키운 이득을 자중이 상당히 잠식한다. **바닥판은 §2 에서 봤듯이
+        활하중이 80 % 를 넘게 지배하는 부재**라, 자중이 늘어도 전체 하중은 거의
+        움직이지 않는다.
+
+        그래서 바닥판에서는 두께가 **가장 잘 듣는 수단**이다. 같은 10 % 로
+        철근량을 늘리는 것보다 1.4 배 효과가 크다.
+
+        > **설계의 의도** — 그럼에도 기준이 두께를 220 mm 로 묶어 두고 더
+        > 키우라고 하지 않는 것은, 두께가 강도만의 문제가 아니기 때문이다.
+        > 두꺼운 바닥판은 상부구조 전체 자중을 키워 거더와 하부구조에 전가되고,
+        > 형하공간을 잡아먹는다. **바닥판에서 싼 것이 다리 전체에서는 비싸다.**
+
+        ## 5. 피복두께 — 내구성과 유효깊이의 맞교환
+
+        피복은 순수한 손해처럼 보인다. 두께는 그대로인데 $d$ 만 깎이기
+        때문이다. 그런데 기준은 해안 교량에서 피복을 80 mm 까지 요구한다.
+
+        $$
+        t_{c,nom} = \underbrace{\max\{d_b;\ t_{c,min,dur} + \Delta t_{c,dur,\gamma};\ 10\}}_{\text{최소피복}}
+        + \underbrace{\Delta t_{c,dev}}_{10\ \text{mm}}
+        $$
+
+        **아래 코드가 하는 일** — 노출등급별 피복과 그로 인한 강도 손실을 본다.
+        """),
+        code("""
+        print(f"{'노출등급':>8}  {'t_c,min':>8}  {'t_c,nom':>8}  {'d':>7}  {'M_Rd':>8}  {'손실':>7}")
+        ref = design_deck(**{**BASE, "exposure": "E0"})
+        for cls in ("E0", "EC1", "EC2", "EC4", "ED1", "ED2", "ED3",
+                    "ES1", "ES2", "ES3"):
+            t_min, t_nom = nominal_cover(exposure=cls, bar_diameter=BASE["bar_diameter"])
+            r = design_deck(**{**BASE, "exposure": cls})
+            loss = (r.m_rd / ref.m_rd - 1) * 100
+            print(f"{cls:>8}  {t_min:6.0f}    {t_nom:6.0f}    {r.d:5.0f}  "
+                  f"{r.m_rd:7.2f}  {loss:+6.1f} %")
+        """),
+
+        md(r"""
+        해안 최악 등급(ES3)에서 강도가 20 % 넘게 깎인다. 그런데도 기준이
+        그 피복을 요구하는 이유는 분명하다 — **강도는 철근을 더 넣어 되찾을 수
+        있지만, 염해로 녹슨 철근은 되돌릴 수 없다.**
+
+        > **설계의 의도** — 피복두께 규정은 강도 규정이 아니라 **수명 규정**이다.
+        > 그래서 극한한계상태가 아니라 내구성(4.4)에 들어 있다. 설계자가 할 일은
+        > 피복을 아끼는 것이 아니라, 깎인 $d$ 를 두께나 철근으로 메우는 것이다.
+
+        노출 바닥판(방수·표면처리 없음)은 마모 대비로 10 mm 를 더 얹는다
+        (4.4.4.2(12)). 아래 코드가 그 차이를 확인한다.
+        """),
+        code("""
+        plain = design_deck(**BASE)
+        exposed = design_deck(**{**BASE, "exposed_deck": True})
+
+        print(f"방수 있음   피복 {plain.cover:.0f} mm,  d {plain.d:.0f} mm,  "
+              f"M_Rd {plain.m_rd:.2f} kN·m/m")
+        print(f"노출 바닥판  피복 {exposed.cover:.0f} mm,  d {exposed.d:.0f} mm,  "
+              f"M_Rd {exposed.m_rd:.2f} kN·m/m")
+        print(f"차이 {(exposed.m_rd / plain.m_rd - 1) * 100:+.1f} %")
+        """),
+
+        md(r"""
+        ## 6. 휨 설계 — 1 m 폭 띠판
+
+        여기서부터는 익숙한 단철근 직사각형 보 계산이다. 폭 1,000 mm, 높이
+        $t$, 유효깊이 $d$ 의 단면을 푼다.
+
+        KDS 24 이므로 재료계수가 재료에 이미 들어 있다.
+
+        $$
+        M_{Rd} = A_s f_{yd} \left( d - \beta_{eq} c \right),
+        \qquad c = \frac{A_s f_{yd}}{\alpha_{eq} f_{cd} b}
+        $$
+
+        **아래 코드가 하는 일** — 기준 단면의 휨 설계를 손으로 따라간다.
+        """),
+        code("""
+        r = design_deck(**BASE)
+        fck, fy = 27.0, 400.0
+        f_cd = design_compressive_strength(fck=fck)
+        f_yd = design_yield_strength(fy=fy)
+        alpha, beta = equivalent_block(fck=fck)
+
+        print(f"f_cd = {f_cd:.2f} MPa   (= 0.65 × 0.85 × {fck:.0f})")
+        print(f"f_yd = {f_yd:.1f} MPa   (= 0.90 × {fy:.0f})")
+        print(f"등가블록 계수  α = {alpha:.3f},  β = {beta:.3f}")
+        print()
+
+        c = r.as_provided * f_yd / (alpha * f_cd * 1000.0)
+        arm = r.d - beta * c
+        print(f"배치 철근 As   {r.as_provided:.0f} mm²/m  (D16@150)")
+        print(f"중립축 깊이 c  {c:.1f} mm      (c/d = {c / r.d:.3f})")
+        print(f"팔길이         {arm:.1f} mm")
+        print(f"M_Rd = As·f_yd·(d - βc) = {r.as_provided * f_yd * arm / 1e6:.2f} kN·m/m")
+        print(f"                          모듈 값 {r.m_rd:.2f} kN·m/m")
+        """),
+
+        md(r"""
+        ### KDS 14 로 풀면 얼마나 다른가
+
+        하중은 어느 쪽이든 KDS 24 12 21 로 구한다 — 교량이니 KL-510 말고는
+        쓸 것이 없다. 갈리는 것은 **단면 저항 쪽뿐**이다.
+
+        **아래 코드가 하는 일** — 같은 $M_{Ed}$ 에 필요한 철근량을 두 기준으로
+        구해 견준다.
+        """),
+        code(L14_DEF),
+
+        code("""
+        print(f"{'거더 간격':>9}  {'M_Ed':>8}  {'KDS 24':>9}  {'KDS 14':>9}  {'차이':>7}")
+        for s in (2.0, 2.5, 3.0, 3.5, 4.0):
+            r = design_deck(**{**BASE, "girder_spacing": s})
+            as24 = r.as_required
+            as14 = required_steel_kds14(m_u=r.m_ed * 1e6, d=r.d)
+            print(f"{s:7.1f} m  {r.m_ed:6.2f}  {as24:7.0f} mm²  {as14:7.0f} mm²  "
+                  f"{(as24 / as14 - 1) * 100:+5.1f} %")
+
+        print()
+        print("KDS 24 쪽이 철근을 조금 덜 요구한다. 휨은 철근이 지배하는데")
+        print("φ_s = 0.90 이 단면 φ = 0.85 보다 덜 깎기 때문이다 (L2 와 같은 이유).")
+        """),
+
+        md(r"""
+        ## 7. 균열이 설계를 지배하는 순간
+
+        여기까지는 강도 이야기였다. 그런데 바닥판에서 **실제로 설계를 결정하는
+        것은 균열인 경우가 많다.**
+
+        기준은 두 가지 길을 준다. 균열폭을 직접 계산하거나(4.2.3.4), 표 4.2-4·
+        4.2-5 로 **철근 지름이나 간격 중 하나를 제한**하는 것으로 갈음하거나
+        (4.2.3.3). 바닥판에서는 뒤쪽이 실용적이다.
+
+        표는 사용하중조합-Ⅰ 의 **철근 응력**을 입력으로 받는다. 철근이 적으면
+        응력이 높아지고, 그러면 허용 간격이 급격히 줄어든다.
+
+        **아래 코드가 하는 일** — 철근 간격을 바꿔 가며 강도 여유와 균열 제어
+        한계를 함께 그린다.
+        """),
+        code("""
+        spacings = np.linspace(100, 300, 101)
+        rows = [design_deck(**{**BASE, "bar_spacing": s}) for s in spacings]
+
+        def crossing(xs, gap):
+            \"\"\"gap 의 부호가 바뀌는 x 를 선형보간으로 찾는다.\"\"\"
+            for x0, x1, g0, g1 in zip(xs, xs[1:], gap, gap[1:]):
+                if g0 >= 0 >= g1:
+                    return x0 + (x1 - x0) * g0 / (g0 - g1)
+            return None
+
+        s_strength = crossing(spacings, [r.m_rd - r.m_ed for r in rows])
+        s_crack = crossing(spacings, [r.crack_spacing_limit - s
+                                      for s, r in zip(spacings, rows)])
+
+        fig, (ax, bx) = plt.subplots(1, 2, figsize=(11, 4.2))
+
+        ax.plot(spacings, [r.m_rd for r in rows], color=C_CAP, lw=2, label="M$_{Rd}$")
+        ax.plot(spacings, [r.m_ed for r in rows], color="k", lw=2, ls="--", label="M$_{Ed}$")
+        ax.axvline(s_strength, color=C_CAP, ls=":", lw=1.4)
+        ax.text(s_strength - 5, 0.06, f"강도 한계 {s_strength:.0f} mm", rotation=90,
+                transform=ax.get_xaxis_transform(), ha="right", va="bottom",
+                fontsize=9, color=C_CAP)
+        ax.set_xlabel("주철근 간격 (mm)")
+        ax.set_ylabel("휨모멘트 (kN·m/m)")
+        ax.set_title("강도 — 간격이 넓어지면 준다")
+        ax.legend(fontsize=9, loc="upper right")
+
+        limits = [r.crack_spacing_limit for r in rows]
+        bx.plot(spacings, spacings, color="k", lw=2, ls="--", label="배치 간격")
+        bx.plot(spacings, limits, color=C_LIVE, lw=2, label="표 4.2-5 허용 간격")
+        bx.fill_between(spacings, spacings, limits,
+                        where=[s > lim for s, lim in zip(spacings, limits)],
+                        color=C_K14, alpha=0.16)
+        bx.axvline(s_crack, color=C_LIVE, ls=":", lw=1.4)
+        bx.text(s_crack - 5, 0.06, f"균열 한계 {s_crack:.0f} mm", rotation=90,
+                transform=bx.get_xaxis_transform(), ha="right", va="bottom",
+                fontsize=9, color=C_LIVE)
+        bx.set_xlabel("주철근 간격 (mm)")
+        bx.set_ylabel("간격 (mm)")
+        bx.set_title("사용성 — 붉은 구간이 균열 제어 불만족")
+        bx.legend(fontsize=9, loc="lower left")
+
+        print(f"강도가 걸리는 간격   {s_strength:.0f} mm")
+        print(f"균열이 걸리는 간격   {s_crack:.0f} mm")
+        print()
+        if s_crack < s_strength:
+            print("균열이 먼저 걸린다 — 이 조건에서는 사용한계상태가 설계를 지배한다.")
+        else:
+            print("강도가 먼저 걸린다 — 이 조건에서는 극한한계상태가 설계를 지배한다.")
+        """),
+
+        md(r"""
+        두 한계가 216 mm 와 225 mm 로 **4 % 밖에 떨어져 있지 않다.** 조건이
+        조금만 바뀌면 순서가 뒤집힌다는 뜻이다.
+
+        무엇이 뒤집는가? 표 4.2-5(간격)와 표 4.2-4(지름)는 모두 철근 응력을
+        입력으로 받지만, **지름 쪽이 훨씬 가혹하다.** 철근 응력 240 MPa 에서
+        허용 간격은 200 mm 인데 허용 지름은 16 mm 다.
+
+        **아래 코드가 하는 일** — 철근 지름을 바꿔 가며 강도 한계와 두 가지
+        균열 한계를 함께 찾는다. 같은 철근량이라도 굵게 띄엄띄엄 넣으면 어떻게
+        되는지 본다.
+        """),
+        code("""
+        def limiting_spacings(**kwargs):
+            \"\"\"강도·균열(간격)·균열(지름) 세 한계가 걸리는 철근 간격을 찾는다.\"\"\"
+            grid = np.linspace(100, 300, 201)
+            rows = [design_deck(**{**BASE, **kwargs, "bar_spacing": s}) for s in grid]
+            dia = kwargs.get("bar_diameter", BASE["bar_diameter"])
+
+            def cross(gap):
+                for x0, x1, g0, g1 in zip(grid, grid[1:], gap, gap[1:]):
+                    if g0 >= 0 >= g1:
+                        return x0 + (x1 - x0) * g0 / (g0 - g1)
+                return float("nan")
+
+            return (
+                cross([r.m_rd - r.m_ed for r in rows]),
+                cross([r.crack_spacing_limit - s for s, r in zip(grid, rows)]),
+                cross([(max_bar_diameter(f_s=r.service_stress)
+                        if r.service_stress <= 360 else 0.0) - dia for r in rows]),
+            )
+
+        print(f"{'지름':>5}  {'강도':>8}  {'균열(간격)':>10}  {'균열(지름)':>10}   지배")
+        for dia in (13, 16, 19, 22, 25):
+            st, csp, cdi = limiting_spacings(bar_diameter=float(dia))
+            found = {"강도": st, "균열(간격)": csp, "균열(지름)": cdi}
+            found = {k: v for k, v in found.items() if v == v}
+            who = min(found, key=found.get) if found else "-"
+            fmt = lambda v: f"{v:8.0f}" if v == v else "   300 밖"
+            print(f"  D{dia:<3} {fmt(st)}  {fmt(csp):>10}  {fmt(cdi):>10}   {who}")
+        """),
+
+        md(r"""
+        D19 부터 순서가 뒤집힌다. 굵은 철근은 강도 면에서는 여유로워
+        300 mm 까지 벌려도 견디지만, **균열이 그것을 허락하지 않는다.**
+
+        이것이 표 4.2-4·4.2-5 가 하려는 말이다. 균열폭은 철근량이 아니라
+        **철근의 배치**가 정한다. 균열 간격 식 $(4.2\text{-}7\text{a})$ 를 다시
+        보면 이유가 분명하다.
+
+        $$
+        l_{r,max} = 3.4 c_c + \frac{0.425 k_1 k_2 d_b}{\rho_e}
+        $$
+
+        철근 지름 $d_b$ 가 **분자에 직접** 들어간다. 같은 철근량이라도 굵은 철근
+        몇 개는 균열을 드문드문 만들고, 드문 균열은 하나하나가 넓다.
+
+        > **설계의 의도** — "가늘게 촘촘히"는 미관 문제가 아니다. 넓은 균열은
+        > 염화물의 고속도로가 되고, 바닥판은 제설염을 직접 맞는 부재다.
+        > 4 % 밖에 안 되는 두 한계의 간격은, 기준이 강도와 내구성을 **비슷한
+        > 수준으로 조여 놓았다**는 뜻이기도 하다.
+        """),
+
+        md(r"""
+        > **설계의 의도** — 표 4.2-5 는 "철근을 굵게 띄엄띄엄 넣지 말고, 가늘게
+        > 촘촘히 넣으라"는 말이다. 같은 철근량이라도 배치가 다르면 균열폭이
+        > 달라지기 때문이다. 균열 간격 식 $(4.2\text{-}7\text{a})$ 에
+        > $3.4c_c + 0.425 k_1 k_2 d_b / \rho_e$ 처럼 **철근 지름이 직접 들어가는**
+        > 이유가 그것이다.
+
+        ## 8. 배력철근과 상세
+
+        주철근만으로는 부족하다. 윤하중은 한 점에 실리는데 바닥판은 폭을 가진
+        판이므로, 그 집중을 옆으로 퍼뜨릴 철근이 필요하다.
+
+        $$
+        \text{배력철근} = \min\left(\frac{120}{\sqrt{L}},\ 67\right)\% \times \text{주철근량}
+        $$
+
+        지간이 짧을수록 비율이 커진다 — 퍼뜨릴 몫이 크기 때문이다. 그래서
+        상한 67 % 가 걸린다.
+
+        **아래 코드가 하는 일** — 지간별 배력철근 비율과 실제 배근을 구한다.
+        """),
+        code("""
+        r = design_deck(**BASE)
+        ratio = distribution_steel_ratio(span=r.span)
+        as_dist = ratio * r.as_provided
+
+        print(f"지간 {r.span:.2f} m  →  배력철근 비율 {ratio * 100:.1f} %")
+        print(f"주철근  {r.as_provided:.0f} mm²/m  (D16@150)")
+        print(f"배력철근 {as_dist:.0f} mm²/m 이상 필요")
+        print()
+        for dia in (10, 13, 16):
+            need = bar_area(diameter=dia) * 1000 / as_dist
+            print(f"  D{dia:<2}  →  간격 {need:.0f} mm 이하  "
+                  f"(상한 300 mm 이므로 {'가능' if need >= 100 else '너무 촘촘'})")
+
+        print()
+        print(f"{'지간':>6}  {'비율':>7}")
+        for L in (1.5, 2.0, 2.5, 3.2, 4.0, 5.0):
+            print(f"{L:5.1f}m  {distribution_steel_ratio(span=L) * 100:5.1f} %")
+        """),
+
+        md(r"""
+        ### 상세 규정이 실제로 설계를 좁힌다
+
+        | 규정 | 값 | 조문 |
+        |---|---|---|
+        | 최소 두께 (RC) | 220 mm | 4.6.5.1(5) |
+        | 최소 두께 (PSC) | 200 mm | 4.6.5.1(5) |
+        | 경험적 설계법 최소 두께 | 240 mm | 4.6.5.2(3)⑦ |
+        | 철근 중심간격 | 100 ~ 300 mm | 4.6.5.2(5)③ |
+        | 하부 주철근 간격 | 바닥판 두께 이하 | 4.6.5.2(5)③ |
+        | 철근 종류 | SD400 이상 | 4.6.5.2(5)① |
+        | 경험적 설계법 층별 철근비 | 0.3 % 이상 | 4.6.5.2(4)② |
+
+        **아래 코드가 하는 일** — 경험적 설계법이 요구하는 철근량과, 해석으로
+        구한 철근량을 견준다.
+        """),
+        code("""
+        r = design_deck(**BASE)
+        empirical = 0.003 * 1000 * r.thickness
+
+        print(f"경험적 설계법  0.3 % × 1000 × {r.thickness:.0f} = {empirical:.0f} mm²/m (층마다)")
+        print(f"해석으로 구한 필요량                        {r.as_required:.0f} mm²/m")
+        print(f"배치량 (D16@150)                          {r.as_provided:.0f} mm²/m")
+        print()
+        if empirical > r.as_required:
+            print("경험적 설계법이 더 많은 철근을 요구한다 — 해석 없이 쓰는 대가다.")
+        else:
+            print("이 조건에서는 해석 쪽이 더 많이 요구한다.")
+        """),
+
+        md(r"""
+        ## 9. 무엇을 바꿀 것인가 — 여섯 변수의 민감도
+
+        L3 에서 보와 기둥을 두고 했던 질문을 바닥판에도 던진다. 강도가
+        모자랄 때 무엇을 올릴 것인가?
+
+        바닥판에는 손댈 수 있는 변수가 여섯이다. 그중 **거더 간격은 설계자의
+        것이 아니고**, 노출등급은 환경이 정한다. 실제로 고를 수 있는 것은
+        두께·철근량·포장 두께뿐이다.
+
+        비교를 공정하게 하려면 **같은 것을 10 % 늘려야** 한다. 철근 지름을
+        10 % 키우면 단면적은 $1.1^2 = 1.21$ 배가 되므로, 지름이 아니라
+        **철근량**을 10 % 늘리는 것으로 맞춘다.
+
+        **아래 코드가 하는 일** — 각 변수를 10 % 씩 유리한 방향으로 바꿔
+        여유($M_{Rd} - M_{Ed}$)가 얼마나 느는지 잰다.
+        """),
+        code("""
+        b0 = design_deck(**BASE)
+        margin0 = b0.m_rd - b0.m_ed
+
+        cases = [
+            ("두께 +10 %", {"thickness": BASE["thickness"] * 1.1}),
+            ("철근량 +10 %", {"bar_spacing": BASE["bar_spacing"] / 1.1}),
+            ("거더 간격 -10 %", {"girder_spacing": BASE["girder_spacing"] * 0.9}),
+            ("포장 -10 %", {"pavement": BASE["pavement"] * 0.9}),
+        ]
+
+        labels, gains = [], []
+        for label, change in cases:
+            r = design_deck(**{**BASE, **change})
+            gain = (r.m_rd - r.m_ed) - margin0
+            labels.append(label)
+            gains.append(gain)
+            print(f"{label:>16}   여유 {r.m_rd - r.m_ed:6.2f}  ({gain:+5.2f} kN·m/m)")
+
+        unfair = design_deck(**{**BASE, "bar_diameter": BASE["bar_diameter"] * 1.1})
+        print()
+        print(f"참고: 철근 '지름' 을 10 % 키우면 철근량이 "
+              f"{unfair.as_provided / b0.as_provided:.2f} 배가 되어")
+        print(f"      여유가 {unfair.m_rd - unfair.m_ed - margin0:+.2f} 까지 오른다. "
+              f"공정한 비교가 아니다.")
+
+        fig, ax = plt.subplots(figsize=(7.6, 3.6))
+        ax.barh(labels, gains, color=C_CAP)
+        ax.axvline(0, color="k", lw=0.9)
+        ax.set_xlabel("여유 M$_{Rd}$ - M$_{Ed}$ 의 증가 (kN·m/m)")
+        ax.set_title("같은 10 % 를 어디에 쓸 것인가")
+        ax.invert_yaxis()
+        for y, g in enumerate(gains):
+            ax.text(g + 0.25, y, f"{g:+.2f}", va="center", fontsize=9)
+        ax.set_xlim(0, max(gains) * 1.3)
+        """),
+
+        md(r"""
+        순서가 L3 의 보와 다르다. 보에서는 철근이 가장 잘 들었지만, **바닥판에서는
+        두께가 이긴다.** §4 에서 본 이유 그대로다 — 바닥판은 활하중이 지배하는
+        부재라 두께가 데려오는 자중의 대가가 거의 없다.
+
+        거더 간격은 세 번째다. 절대값으로는 두께보다 작지만, **성격이 다르다.**
+        철근이나 두께는 바닥판 안에서 끝나는 결정이지만 거더 간격은 상부구조
+        전체를 바꾼다. 거더를 한 본 더 넣으면 간격이 10 % 가 아니라 20~30 %
+        줄고, 대신 거더 값과 하부구조가 함께 늘어난다.
+
+        포장은 사실상 영향이 없다(+0.17). 포장을 얇게 해 바닥판을 구하려는
+        시도는 의미가 없다는 뜻이다.
+
+        > **설계의 의도** — 여기서 얻을 교훈은 "두께를 키우라"가 아니다.
+        > **같은 부재라도 하중 구성이 다르면 효율의 순서가 뒤집힌다**는 것이다.
+        > L3 의 결론을 바닥판에 그대로 옮기면 틀린다.
+
+        ## 정리
+
+        1. **바닥판은 판이지 보가 아니다.** 그래서 트럭을 굴리지 않고 실물
+           실험으로 보정한 근사식을 쓴다. 그 식은 이미 2방향 거동과 하중 퍼짐을
+           삼키고 있고, 그래서 전단 검토를 면제해 준다.
+        2. **끝까지 활하중이 지배한다.** 어떤 거더 간격에서도 활하중이 80 % 를
+           넘는다. 피로와 내구성이 바닥판 설계의 본질인 이유다.
+        3. **바닥판에서는 두께가 가장 잘 듣는다.** 활하중이 지배하는 부재라
+           두께가 데려오는 자중의 대가가 이득의 4 % 뿐이다. 보를 다루던
+           직관(L3)을 그대로 옮기면 틀린다.
+        4. **피복은 손해가 아니라 수명이다.** ES3 에서 강도가 20 % 넘게
+           깎이지만, 녹슨 철근은 되돌릴 수 없다.
+        5. **균열이 강도보다 먼저 걸리는 구간이 있다.** 표 4.2-5 는 "가늘게
+           촘촘히"를 요구한다.
+        6. **거더 간격은 바닥판 설계자의 것이 아니다.** 효과는 세 번째지만
+           성격이 다르다 — 거더를 한 본 더 넣는 결정은 상부구조 전체를 바꾼다.
+
+        ## 생각해 볼 문제
+
+        1. 식 $(4.6\text{-}1)$ 의 등가 분포폭이 지간과 거의 무관하게 2.4 m 로
+           나왔다. 만약 인접 차로의 윤하중이 1.8 m 옆에 함께 실린다면 이 폭은
+           여전히 타당한가? 기준이 다차로 재하계수를 바닥판에 쓰지 않는 이유를
+           설명해 보라.
+        2. 캔틸레버 분포폭 $E = 0.8X + 1.14$ 에서 $X \to 0$ 이면 $E \to 1.14$ m
+           다. 지지점 바로 위에 윤하중이 실려도 1.14 m 에 퍼진다는 뜻인데,
+           물리적으로 무엇을 반영한 값이겠는가?
+        3. 노출등급 ES3 인 해상 교량 바닥판을 설계한다. 피복 80 mm 를 확보하면서
+           $d$ 를 잃지 않으려면 두께를 얼마나 키워야 하는가? 그때 자중 증가로
+           잃는 것과 견주어 이득이 있는가? 직접 계산해 보라.
+        4. 경험적 설계법(0.3 % × 4층)과 해석 설계법 중 어느 쪽이 철근을 더
+           요구하는지는 조건에 따라 갈린다. 어떤 조건에서 경험적 설계법이
+           불리해지는가?
+        5. 바닥판의 피로한계상태 검증은 면제된다(4.6.5.1(3)). 그런데 하중의
+           80 % 가 활하중이다. 이 면제가 정당화되려면 무엇이 전제되어야 하는가?
+        """),
+    ], directory=LECTURES)
+
+
+BUILDERS = [nb_l1_block, nb_l2_phi, nb_l3_params, nb_l4_deck]
 
 
 def main() -> int:
