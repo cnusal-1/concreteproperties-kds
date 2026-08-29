@@ -36,6 +36,9 @@ from concreteproperties_kds import shear                     # 모듈 객체
 | `kds24.live_load` | KDS 24 12 21 4.3, 4.4 — 차량활하중 KL-510 |
 | `kds24.shear` | KDS 24 14 21 4.1.2 — 변각 트러스 전단 |
 | `kds24.serviceability` | KDS 24 14 21 4.2, 4.3 — 사용성과 피로 |
+| `kds24.deck` | KDS 24 10 11 4.6.2, 24 14 21 4.6.5 — 교량 바닥판 |
+| `kds24.psc` | KDS 24 14 21 1.5.7, 3.3 — 도입응력과 손실 |
+| `kds24.girder` | KDS 24 14 21 4.1, 4.2 — PSC I형 거더 |
 
 `kds24` 의 이름도 서브패키지에서 바로 가져올 수 있다.
 
@@ -70,6 +73,9 @@ from concreteproperties_kds.kds24 import KDS24, check_shear, girder_live_load
     concreteproperties_kds.kds24.live_load
     concreteproperties_kds.kds24.shear
     concreteproperties_kds.kds24.serviceability
+    concreteproperties_kds.kds24.deck
+    concreteproperties_kds.kds24.psc
+    concreteproperties_kds.kds24.girder
 ```
 
 아래는 손으로 정리한 요약이다. 설계식과 조문의 대응만 보려면
@@ -390,6 +396,64 @@ KDS 14 20 설계기준 클래스. `column_type` 은 `"tie"`(띠철근) 또는
 | `fatigue_stress_range_limit(f_min, welded)` | 식 (4.3-1), (4.3-2) |
 | `COUPLER_FATIGUE_STRENGTH`, `coupler_fatigue_strength(kind, n_cycles)` | 표 4.3-1 |
 | `fatigue_check_required(f_dead_compression, f_live_tension)` | 4.3.1(4) |
+
+---
+
+## `kds24.deck` — 교량 바닥판 (KDS 24 10 11 4.6.2, 24 14 21 4.6.5)
+
+| 이름 | 내용 |
+|---|---|
+| `WHEEL_LOAD`, `DECK_FCK` | 윤하중 96 kN, 바닥판 $f_{ck}$ 27 MPa |
+| `MIN_THICKNESS_RC`, `MIN_THICKNESS_PSC`, `MIN_THICKNESS_EMPIRICAL` | 220 / 200 / 240 mm |
+| `deck_span(girder_spacing, thickness, web_width)` | 4.6.2.3 |
+| `live_load_moment(span, wheel_load, continuous, grade)` | 식 (4.6-1) |
+| `wheel_width_parallel(span)`, `live_load_moment_parallel(span, grade)` | 4.6.2.4 |
+| `cantilever_wheel_width(x, parallel)`, `cantilever_live_load_moment(...)` | 식 (4.6-4) |
+| `dead_load_moment(w, span, kind)` | 표 4.6-2 |
+| `distribution_steel_ratio(span, parallel)` | $120/\sqrt{L} \le 67\,\%$ |
+| `nominal_cover(exposure, bar_diameter, exposed_deck, delta_dev, tendon)` | 식 (4.4-1), 표 4.4-4 |
+| `deck_deflection_limit(span, pedestrian)` | 4.6.5.1 |
+| `required_steel_area(...)`, `provided_steel_area(...)`, `bar_area(diameter)` | 휨 설계 |
+| `minimum_flexural_steel(d, fck, fy, width)` | 최소 철근량 |
+| `design_deck(...)` → `DeckDesign` | 바닥판 종합 설계 |
+
+---
+
+## `kds24.psc` — 도입응력과 손실 (KDS 24 14 21 1.5.7, 3.3)
+
+| 이름 | 내용 |
+|---|---|
+| `max_jacking_stress(fpu, fpy, overtension)` | 식 (1.5-7) |
+| `stress_after_transfer(fpy, fpu, reading)` | 식 (1.5-9) — **읽기가 갈린다** |
+| `concrete_stress_limit_at_transfer(fck_t, pretension)` | 식 (1.5-8) |
+| `friction_loss(p_o, theta, x, mu, k)`, `CURVATURE_FRICTION` | 식 (1.5-11), 표 1.5-2 |
+| `anchorage_set_loss(slip, length, a_p, e_p)` | 정착장치 활동 |
+| `elastic_shortening_loss(a_p, delta_fc, e_cm, n_tendon, post_tension)` | 식 (1.5-10) |
+| `relaxation_loss(f_pi, fpu, steel_class, hours, rho_1000)` | 식 (3.3-1)~(3.3-3) |
+| `RELAXATION_COEFFICIENTS`, `RHO_1000` | 3.3.2(7)③ |
+| `long_term_loss(...)` | 식 (1.5-12) |
+| `PrestressLosses` | 손실 내역 |
+
+:::{warning}
+`stress_after_transfer` 의 `reading` 인자를 볼 것. 식 $(1.5\text{-}9)$ 는 원문
+그대로 읽으면 한계가 $0.75 f_{py}$ 이지만, 대응하는 EN 1992-1-1 5.10.3(2) 와
+바로 앞 식 $(1.5\text{-}7)$ 의 방식으로 읽으면 $\min(0.75 f_{pu},\ 0.85 f_{py})$
+다. 1,860/1,600 강연선에서 1,200 vs 1,360 MPa 로 차이가 작지 않다.
+:::
+
+---
+
+## `kds24.girder` — PSC I형 거더 (KDS 24 14 21 4.1, 4.2)
+
+| 이름 | 내용 |
+|---|---|
+| `IGirder` | 단면 형상 (사다리꼴 구간 5 개) |
+| `IGirder.properties()` → `SectionProperties` | 정확 적분한 단면 성질 |
+| `IGirder.composite(deck_width, deck_thickness, modular_ratio, haunch)` | 합성 단면 |
+| `IGirder.first_moment_above(y)` | 단면1차모멘트 $Q$ (정확 적분) |
+| `EXAMPLE_SECTIONS` | **예시 단면 5 종 — 표준도가 아니다** |
+| `TENDON_COVER`, `GAMMA_CONCRETE` | 기본 긴장재 피복 200 mm, 24.5 kN/m³ |
+| `design_girder(...)` → `GirderCheck` | 손실·응력·휨강도 종합 검토 |
 
 ---
 

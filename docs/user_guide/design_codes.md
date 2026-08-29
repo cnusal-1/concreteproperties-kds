@@ -71,9 +71,14 @@ KDS 는 단면 해석뿐 아니라 하중조합·전단·사용성·내구성·�
 | `kds24.live_load` | 24 12 21 4.3, 4.4 | KL-510 표준트럭·표준차로하중, 충격 | [하중조합과 설계하중](design_codes/kds24_loads.md) |
 | `kds24.shear` | 24 14 21 4.1.2 | 변각 트러스 모델 전단 | [전단](design_codes/kds24_shear.md) |
 | `kds24.serviceability` | 24 14 21 4.2, 4.3 | 응력 한계, 균열폭, 처짐, 피로 | [사용성과 피로](design_codes/kds24_serviceability.md) |
+| `kds24.deck` | 24 10 11 4.6.2, 24 14 21 4.6.5 | 교량 바닥판의 하중과 휨 설계 | [교량 바닥판](design_codes/kds24_deck.md) |
+| `kds24.psc` | 24 14 21 1.5.7, 3.3 | 도입응력 한계, 즉시·장기 손실 | [프리스트레스와 PSC 거더](design_codes/kds24_psc.md) |
+| `kds24.girder` | 24 14 21 4.1, 4.2 | PSC I형 거더 단면·합성·검토 | [프리스트레스와 PSC 거더](design_codes/kds24_psc.md) |
 
-KDS 24 로 교량 바닥판을 처음부터 끝까지 설계하는 예제는
-[`examples/17_바닥판설계.py`](../../examples/17_바닥판설계.py) 를 참고한다.
+KDS 24 로 처음부터 끝까지 설계하는 예제는
+[`examples/17_바닥판설계.py`](../../examples/17_바닥판설계.py) (교량 바닥판) 와
+[`examples/18_PSC거더설계.py`](../../examples/18_PSC거더설계.py) (PSC I형 거더) 를
+참고한다.
 
 ## 공통 사용법
 
@@ -133,5 +138,7 @@ KDS 24 — 한계상태설계법 <design_codes/kds24>
 KDS 24 — 하중조합과 설계하중 <design_codes/kds24_loads>
 KDS 24 — 전단 <design_codes/kds24_shear>
 KDS 24 — 사용성과 피로 <design_codes/kds24_serviceability>
+KDS 24 — 교량 바닥판 <design_codes/kds24_deck>
+KDS 24 — 프리스트레스와 PSC 거더 <design_codes/kds24_psc>
 설계식 목록 <design_codes/equations>
 ```
