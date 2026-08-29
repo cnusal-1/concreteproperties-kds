@@ -10,7 +10,8 @@
 
 원리를 따라가려면 [강의 L6 (휨설계)](../../lectures/L6_PSC거더_휨설계.ipynb)
 와 [강의 L7 (전단설계)](../../lectures/L7_PSC거더_전단설계.ipynb) 를, 전체 설계
-흐름은 [예제 18](../../examples/18_girder_design.ipynb) 을 본다.
+흐름은 [예제 18 (휨)](../../examples/18_girder_design.ipynb) 과
+[예제 19 (전단)](../../examples/19_girder_shear.ipynb) 을 본다.
 
 ## 도입응력의 상한
 
