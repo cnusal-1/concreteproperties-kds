@@ -303,8 +303,9 @@
     <button role="tab" id="tab-block" aria-selected="true" aria-controls="panel-block">L1 · 등가응력블록</button>
     <button role="tab" id="tab-col" aria-selected="false" aria-controls="panel-col">L2 · 강도감소계수 φ</button>
     <button role="tab" id="tab-beam" aria-selected="false" aria-controls="panel-beam">L3 · 설계 파라미터</button>
-    <button role="tab" id="tab-deck" aria-selected="false" aria-controls="panel-deck">L4 · 바닥판 설계</button>
-    <button role="tab" id="tab-girder" aria-selected="false" aria-controls="panel-girder">L5 · PSC 거더</button>
+    <button role="tab" id="tab-deck" aria-selected="false" aria-controls="panel-deck">L4 · 바닥판 (내측)</button>
+    <button role="tab" id="tab-girder" aria-selected="false" aria-controls="panel-girder">L6 · PSC 거더 휨</button>
+    <button role="tab" id="tab-shear" aria-selected="false" aria-controls="panel-shear">L7 · PSC 거더 전단</button>
   </div>
 </header>
 
@@ -703,6 +704,79 @@
     </div>
   </section>
 
+  <section id="panel-shear" role="tabpanel" aria-labelledby="tab-shear" class="hidden">
+    <div class="layout">
+      <div class="rail">
+        <h2>PSC 거더 전단 조건</h2>
+        <p class="sub" style="margin:2px 0 0;font-size:12.5px">
+          L6 에서 설계한 거더(PSC-I 2.0m, 지간 30 m, 25가닥)의 전단이다.
+          변각 트러스 모델, KDS 24 14 21 4.1.2.
+        </p>
+
+        <div class="control">
+          <div class="control-head"><label for="s-bw">복부 두께 b<sub>w</sub></label><output id="s-bw-out"></output></div>
+          <input type="range" id="s-bw" min="200" max="500" step="10" value="290">
+          <div class="ticks"><span>200 mm</span><span>500 mm</span></div>
+        </div>
+
+        <div class="control">
+          <div class="control-head"><label for="s-cot">cot θ</label><output id="s-cot-out"></output></div>
+          <input type="range" id="s-cot" min="100" max="250" step="5" value="200">
+          <div class="ticks"><span>1.0 (45°)</span><span>2.5 (21.8°)</span></div>
+        </div>
+
+        <div class="control">
+          <div class="control-head"><label for="s-dia">스터럽 지름</label><output id="s-dia-out"></output></div>
+          <input type="range" id="s-dia" min="0" max="3" step="1" value="1">
+          <div class="ticks"><span>D10</span><span>D19</span></div>
+        </div>
+
+        <div class="control">
+          <div class="control-head"><label for="s-sp">스터럽 간격</label><output id="s-sp-out"></output></div>
+          <input type="range" id="s-sp" min="75" max="600" step="25" value="150">
+          <div class="ticks"><span>75 mm</span><span>600 mm</span></div>
+        </div>
+
+        <div class="control">
+          <div class="control-head"><label for="s-n">강연선 가닥 수</label><output id="s-n-out"></output></div>
+          <input type="range" id="s-n" min="10" max="60" step="1" value="25">
+          <div class="ticks"><span>10가닥</span><span>60가닥</span></div>
+        </div>
+
+        <p class="sub" style="margin-top:14px">
+          강연선을 늘리면 f<sub>n</sub> 이 커져 <b>콘크리트 전단강도가 직접 오른다</b>.
+          휨에는 없던 효과다.
+        </p>
+      </div>
+
+      <div>
+        <div class="chips" id="s-chips"></div>
+        <div class="plots">
+          <div class="card wide">
+            <h3>지간을 따라 — 전단은 지점이 지배한다</h3>
+            <p class="cap">붉은 영역이 스터럽이 받아야 할 몫이다. 휨(회색 파선)과 정확히 반대로 간다.</p>
+            <svg id="s-span" viewBox="0 0 940 320" role="img" aria-label="지간에 따른 전단력과 전단강도"></svg>
+          </div>
+          <div class="card">
+            <h3>cot θ 의 대가</h3>
+            <p class="cap">스터럽 강도는 오르지만 스트럿이 먼저 부서진다. 두 곡선이 만나는 곳이 한계다.</p>
+            <svg id="s-cot-svg" viewBox="0 0 460 300" role="img" aria-label="cot theta 에 따른 전단강도"></svg>
+          </div>
+          <div class="card">
+            <h3>프리스트레스가 올리는 몫</h3>
+            <p class="cap">f<sub>n</sub> 이 V<sub>cd</sub> 식에 직접 들어간다. 회색이 프리스트레스가 없을 때다.</p>
+            <svg id="s-fn" viewBox="0 0 460 300" role="img" aria-label="축응력에 따른 콘크리트 전단강도"></svg>
+          </div>
+          <div class="card wide">
+            <h3>검토 결과</h3>
+            <p class="cap">지점부 단면 기준. KDS 24 14 21 4.1.2 와 4.6.3.</p>
+            <div class="chips" id="s-checks" style="margin-bottom:4px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
 
   <footer>
     브라우저에서 파이썬을 돌릴 수 없으므로, 매개변수 격자 위의 해석 결과를 미리 계산해
@@ -893,8 +967,9 @@ function stateChip(k, cls) {
 /* ── 탭 ──────────────────────────────────────────────────── */
 const PANELS = { "tab-block": "panel-block", "tab-col": "panel-col",
                  "tab-beam": "panel-beam", "tab-deck": "panel-deck",
-                 "tab-girder": "panel-girder" };
-const redrawAll = () => { drawBlock(); drawColumn(); drawBeam(); drawDeck(); drawGirder(); };
+                 "tab-girder": "panel-girder", "tab-shear": "panel-shear" };
+const redrawAll = () => { drawBlock(); drawColumn(); drawBeam(); drawDeck();
+                          drawGirder(); drawShear(); };
 
 document.querySelectorAll('[role="tab"]').forEach(btn => {
   btn.addEventListener("click", () => {
@@ -2278,6 +2353,342 @@ function drawGirderSweep(o, r) {
           : "이 조건에서는 한쪽 한계상태가 전 구간에서 더 많은 가닥을 요구한다"));
 
   axisTitles(svg, W, H, m, "필요 강연선 (가닥)", null);
+}
+
+/* ── 탭 6 · PSC 거더 전단 (L7) ───────────────────────────────────── */
+/* KDS 24 14 21 4.1.2 변각 트러스 모델. 파이썬 kds24.shear 와 같은 식이다. */
+const SHEAR = {
+  zRatio: 0.9, rhoMax: 0.02, kappaMax: 2.0,
+  cotMin: 1.0, cotMax: 2.5,
+  fvy: 400.0,               // 스터럽 항복강도 (MPa)
+  dias: [10, 13, 16, 19],
+  areas: { 10: 71.33, 13: 126.7, 16: 198.6, 19: 286.5 },
+  legs: 2,                  // 스터럽 가닥 수
+};
+
+const kappaS = d => Math.min(1 + Math.sqrt(200 / d), SHEAR.kappaMax);
+const nuS = fck => 0.6 * (1 - fck / 250);
+
+/** 식 (4.1-7) — 전단철근 없는 부재의 콘크리트 전단강도 (N) */
+function vcdMain(fck, bw, d, as, fn, phiC) {
+  const rho = Math.min(as / (bw * d), SHEAR.rhoMax);
+  return (0.85 * phiC * kappaS(d) * Math.cbrt(rho * fck) + 0.15 * fn) * bw * d;
+}
+
+/** 식 (4.1-8) — 하한 */
+function vcdMin(fck, bw, d, fn, phiC) {
+  return (0.4 * phiC * gFctk(fck) + 0.15 * fn) * bw * d;
+}
+
+function vcdDesign(fck, bw, d, as, fn, phiC) {
+  return Math.max(vcdMain(fck, bw, d, as, fn, phiC),
+                  vcdMin(fck, bw, d, fn, phiC));
+}
+
+/** 식 (4.1-17) — 스트럿 파괴 상한 (N) */
+function vdMax(fck, bw, d, cot, phiC) {
+  return nuS(fck) * phiC * fck * bw * (SHEAR.zRatio * d) / (cot + 1 / cot);
+}
+
+/** 식 (4.1-16) — 스터럽이 부담하는 전단강도 (N) */
+function vsd(fvy, av, d, s, cot, phiS) {
+  return phiS * fvy * av * (SHEAR.zRatio * d) / s * cot;
+}
+
+/** 평균 축응력 — 0.2 phi_c f_ck 로 상한 */
+function axialS(nu_, ac, fck, phiC) {
+  return Math.min(nu_ / ac, 0.2 * phiC * fck);
+}
+
+function shearSolve(o) {
+  const G = GIRDER, phiC = G.phiC, phiS = G.phiS;
+  const sec = GIRDER.sections[2];        // PSC-I 2.0m — L6 과 같은 거더
+  const span = 30.0, fck = 40.0;
+  const g = gProps(sec);
+  const comp = gComposite(sec, g, gEc(G.fckDeck) / gEc(fck));
+  const ap = o.n * G.strand;
+
+  // L6 과 같은 방식으로 유효 프리스트레스를 구한다
+  const base = girderSolve({ sec, span, n: o.n, fck, eRatio: 1.0 });
+  const d = base.dp;
+  const fn = axialS(base.pE, comp.area, fck, phiC);
+
+  const av = SHEAR.legs * SHEAR.areas[o.dia];
+  const wTotal = G.gamma * g.area / 1e6
+               + G.gamma * (G.spacing / 1000) * (G.deckT / 1000) + G.wSdl;
+
+  const vEdAt = x => {
+    const vDc = wTotal * (span / 2 - x);
+    // 전단 영향선은 (L-x)/L 로 근사한다 — 트럭을 굴린 파이썬 값과 2 % 내로 맞는다
+    const vLl = gLiveShear(span, x) * G.df;
+    return 1.25 * vDc + 1.80 * vLl;
+  };
+
+  const vCd = vcdDesign(fck, o.bw, d, ap, fn, phiC) / 1e3;
+  const vCd0 = vcdDesign(fck, o.bw, d, ap, 0.0, phiC) / 1e3;
+  const vMax = vdMax(fck, o.bw, d, o.cot, phiC) / 1e3;
+  const vS = vsd(SHEAR.fvy, av, d, o.sp, o.cot, phiS) / 1e3;
+  const vEd0 = vEdAt(0);
+
+  const sMax = 0.75 * d;                       // alpha = 90도
+  const rhoMin = 0.08 * Math.sqrt(fck) / SHEAR.fvy;
+  const sRho = av / (rhoMin * o.bw);
+
+  // 스터럽이 필요 없어지는 위치
+  let xFree = null;
+  for (let x = 0; x <= span / 2; x += 0.1) {
+    if (vEdAt(x) <= vCd) { xFree = x; break; }
+  }
+
+  return {
+    sec, span, fck, d, fn, av, ap, comp, g, wTotal, vEdAt,
+    vCd, vCd0, vMax, vS, vEd0, sMax, sRho, xFree, pE: base.pE,
+    checks: {
+      "스트럿 (V_d,max)": vEd0 <= vMax,
+      "전단강도 V_cd + V_sd": vEd0 <= vCd + vS,
+      "cot θ 범위": o.cot >= SHEAR.cotMin - 1e-9 && o.cot <= SHEAR.cotMax + 1e-9,
+      "최대 간격 0.75d": o.sp <= sMax,
+      "최소 전단철근": o.sp <= sRho,
+    },
+  };
+}
+
+/** KL-510 이 지간 x 위치에 만드는 최대 전단력 (kN, 1개 차로) */
+const _shearMemo = new Map();
+function gLiveShear(L, x) {
+  const key = L + "|" + x.toFixed(2);
+  if (_shearMemo.has(key)) return _shearMemo.get(key);
+  const G = GIRDER;
+  let best = 0;
+  for (let front = -G.axleX[3]; front <= L + 1e-9; front += 0.2) {
+    let sum = 0, any = false;
+    for (let i = 0; i < 4; i++) {
+      const a = front + G.axleX[i];
+      if (a >= 0 && a <= L) { sum += G.axleP[i] * (L - a); any = true; }
+    }
+    if (!any) continue;
+    const Ra = sum / L;
+    let v = Ra;
+    for (let i = 0; i < 4; i++) {
+      const a = front + G.axleX[i];
+      if (a >= 0 && a < x) v -= G.axleP[i];
+    }
+    if (Math.abs(v) > best) best = Math.abs(v);
+  }
+  const lane = laneLoad(L) * Math.pow(L - x, 2) / (2 * L);
+  const v = Math.max(1.25 * best, 0.75 * 1.25 * best + lane);
+  _shearMemo.set(key, v);
+  return v;
+}
+
+const sBw   = bindRange2("s-bw",  v => v.toFixed(0) + " mm", () => drawShear());
+const sCot  = bindRange2("s-cot", v => (v / 100).toFixed(2) + " (" +
+              (Math.atan(100 / v) * 180 / Math.PI).toFixed(1) + "°)", () => drawShear());
+const sDia  = bindRange2("s-dia", i => "D" + SHEAR.dias[i] + " x2", () => drawShear());
+const sSp   = bindRange2("s-sp",  v => v.toFixed(0) + " mm", () => drawShear());
+const sN    = bindRange2("s-n",   v => v.toFixed(0) + "가닥",  () => drawShear());
+
+function shearState() {
+  return { bw: sBw.get(), cot: sCot.get() / 100, dia: SHEAR.dias[sDia.get()],
+           sp: sSp.get(), n: sN.get() };
+}
+
+function drawShear() {
+  const o = shearState(), r = shearSolve(o);
+
+  document.getElementById("s-chips").innerHTML =
+    chip("d", r.d.toFixed(0), "mm") +
+    chip("f<sub>n</sub>", r.fn.toFixed(2), "MPa") +
+    chip("V<sub>Ed</sub> (지점)", r.vEd0.toFixed(0), "kN") +
+    chip("V<sub>cd</sub>", r.vCd.toFixed(0), "kN") +
+    chip("V<sub>sd</sub>", r.vS.toFixed(0), "kN") +
+    chip("V<sub>d,max</sub>", r.vMax.toFixed(0), "kN") +
+    chip("스터럽 구간", r.xFree === null ? "전 구간" : r.xFree.toFixed(1), "m") +
+    chip("V<sub>cd</sub> 증가", ((r.vCd / r.vCd0 - 1) * 100).toFixed(0), "%");
+
+  document.getElementById("s-checks").innerHTML = Object.entries(r.checks)
+    .map(([k, ok]) => `<div class="chip state" data-cls="${ok ? "인장지배단면" : "압축지배단면"}">` +
+                      `<span class="k">${k}</span><span class="v">${ok ? "만족" : "불만족"}</span></div>`)
+    .join("");
+
+  drawShearSpan(o, r);
+  drawShearCot(o, r);
+  drawShearFn(o, r);
+}
+
+function drawShearSpan(o, r) {
+  const svg = document.getElementById("s-span");
+  svg.innerHTML = "";
+  const W = 940, H = 320, m = { l: 66, r: 120, t: 26, b: 50 };
+  const pw = W - m.l - m.r, ph = H - m.t - m.b;
+  const grey = CSSVAR("--muted"), ink = CSSVAR("--ink");
+  const cLoad = CSSVAR("--comp"), cRes = CSSVAR("--tens");
+
+  const half = r.span / 2;
+  const pts = [];
+  for (let x = 0; x <= half + 1e-9; x += 0.5) pts.push([x, r.vEdAt(x)]);
+  const top = Math.max(...pts.map(p => p[1]), r.vCd) * 1.12;
+  const X = v => m.l + v / half * pw;
+  const Y = v => m.t + ph - Math.min(v, top) / top * ph;
+
+  svg.appendChild(el("line", { x1: m.l, y1: m.t + ph, x2: m.l + pw, y2: m.t + ph, stroke: grey }));
+  svg.appendChild(el("line", { x1: m.l, y1: m.t, x2: m.l, y2: m.t + ph, stroke: grey }));
+  for (let x = 0; x <= half; x += 3) {
+    svg.appendChild(el("line", { x1: X(x), y1: m.t, x2: X(x), y2: m.t + ph,
+      stroke: grey, opacity: 0.2 }));
+    svg.appendChild(el("text", { x: X(x), y: m.t + ph + 17, "text-anchor": "middle",
+      fill: grey, "font-size": 10.5 }, x));
+  }
+  for (let i = 0; i <= 4; i++) {
+    const v = top * i / 4;
+    svg.appendChild(el("line", { x1: m.l, y1: Y(v), x2: m.l + pw, y2: Y(v),
+      stroke: grey, opacity: 0.2 }));
+    svg.appendChild(el("text", { x: m.l - 7, y: Y(v) + 4, "text-anchor": "end",
+      fill: grey, "font-size": 10.5 }, v.toFixed(0)));
+  }
+
+  // 스터럽이 받아야 할 몫
+  const above = pts.filter(p => p[1] > r.vCd);
+  if (above.length) {
+    const poly = above.map(p => [X(p[0]), Y(p[1])])
+      .concat(above.slice().reverse().map(p => [X(p[0]), Y(r.vCd)]));
+    svg.appendChild(el("polygon", {
+      points: poly.map(p => p.map(v => v.toFixed(1)).join(",")).join(" "),
+      fill: cLoad, "fill-opacity": 0.16 }));
+  }
+
+  svg.appendChild(path(pts.map(p => [X(p[0]), Y(p[1])]),
+    { stroke: cLoad, "stroke-width": 2.4 }));
+  svg.appendChild(el("line", { x1: m.l, y1: Y(r.vCd), x2: m.l + pw, y2: Y(r.vCd),
+    stroke: cRes, "stroke-width": 2.2 }));
+
+  // 참고 — 휨모멘트는 반대로 간다
+  const mpts = [];
+  for (let x = 0; x <= half + 1e-9; x += 0.5) mpts.push([x, x * (r.span - x)]);
+  const mtop = Math.max(...mpts.map(p => p[1]));
+  svg.appendChild(path(mpts.map(p => [X(p[0]), m.t + ph - p[1] / mtop * ph * 0.92]),
+    { stroke: grey, "stroke-width": 1.6, "stroke-dasharray": "6 4", opacity: 0.8 }));
+
+  if (r.xFree !== null) {
+    svg.appendChild(el("line", { x1: X(r.xFree), y1: m.t, x2: X(r.xFree), y2: m.t + ph,
+      stroke: ink, "stroke-width": 1, "stroke-dasharray": "3 3", opacity: 0.55 }));
+    svg.appendChild(el("text", { x: X(r.xFree), y: m.t - 8, "font-size": 10,
+      "text-anchor": "middle", fill: ink }, `x = ${r.xFree.toFixed(1)} m`));
+  }
+
+  const lab = (y, colour, t) => svg.appendChild(
+    el("text", { x: m.l + pw + 6, y, fill: colour, "font-size": 10.5 }, t));
+  lab(m.t + 14, cLoad, "V_Ed (극한Ⅰ)");
+  lab(m.t + 32, cRes, `V_cd = ${r.vCd.toFixed(0)} kN`);
+  lab(m.t + 50, grey, "M_Ed (참고)");
+
+  axisTitles(svg, W, H, m, "전단력 (kN)", "지점에서의 거리 (m)");
+}
+
+function drawShearCot(o, r) {
+  const svg = document.getElementById("s-cot-svg");
+  svg.innerHTML = "";
+  const W = 460, H = 300, m = { l: 58, r: 16, t: 24, b: 52 };
+  const pw = W - m.l - m.r, ph = H - m.t - m.b;
+  const grey = CSSVAR("--muted"), ink = CSSVAR("--ink");
+  const cS = CSSVAR("--tens"), cStrut = CSSVAR("--comp");
+
+  const cots = [];
+  for (let c = SHEAR.cotMin; c <= SHEAR.cotMax + 1e-9; c += 0.05) cots.push(c);
+  const vsdC = cots.map(c => vsd(SHEAR.fvy, r.av, r.d, o.sp, c, GIRDER.phiS) / 1e3);
+  const vmaxC = cots.map(c => vdMax(r.fck, o.bw, r.d, c, GIRDER.phiC) / 1e3);
+  const top = Math.max(...vsdC, ...vmaxC) * 1.1;
+
+  const X = c => m.l + (c - SHEAR.cotMin) / (SHEAR.cotMax - SHEAR.cotMin) * pw;
+  const Y = v => m.t + ph - Math.min(v, top) / top * ph;
+
+  svg.appendChild(el("line", { x1: m.l, y1: m.t + ph, x2: m.l + pw, y2: m.t + ph, stroke: grey }));
+  svg.appendChild(el("line", { x1: m.l, y1: m.t, x2: m.l, y2: m.t + ph, stroke: grey }));
+  for (const c of [1.0, 1.5, 2.0, 2.5]) {
+    svg.appendChild(el("line", { x1: X(c), y1: m.t, x2: X(c), y2: m.t + ph,
+      stroke: grey, opacity: 0.2 }));
+    svg.appendChild(el("text", { x: X(c), y: m.t + ph + 17, "text-anchor": "middle",
+      fill: grey, "font-size": 10.5 }, c.toFixed(1)));
+  }
+  for (let i = 0; i <= 4; i++) {
+    const v = top * i / 4;
+    svg.appendChild(el("line", { x1: m.l, y1: Y(v), x2: m.l + pw, y2: Y(v),
+      stroke: grey, opacity: 0.2 }));
+    svg.appendChild(el("text", { x: m.l - 6, y: Y(v) + 4, "text-anchor": "end",
+      fill: grey, "font-size": 10 }, v.toFixed(0)));
+  }
+
+  svg.appendChild(path(cots.map((c, i) => [X(c), Y(vsdC[i])]),
+    { stroke: cS, "stroke-width": 2.2 }));
+  svg.appendChild(path(cots.map((c, i) => [X(c), Y(vmaxC[i])]),
+    { stroke: cStrut, "stroke-width": 2.2 }));
+
+  // 교차점
+  let cross = null;
+  for (let i = 1; i < cots.length; i++) {
+    const a = vsdC[i - 1] - vmaxC[i - 1], b = vsdC[i] - vmaxC[i];
+    if (a * b < 0) { cross = cots[i]; break; }
+  }
+  if (cross) {
+    svg.appendChild(el("line", { x1: X(cross), y1: m.t, x2: X(cross), y2: m.t + ph,
+      stroke: ink, "stroke-width": 1, "stroke-dasharray": "3 3", opacity: 0.6 }));
+    svg.appendChild(el("text", { x: X(cross), y: m.t + 12, "font-size": 10,
+      "text-anchor": "middle", fill: ink }, `cot θ ${cross.toFixed(2)}`));
+  }
+
+  // 현재 값
+  svg.appendChild(el("circle", { cx: X(o.cot), cy: Y(r.vS), r: 4, fill: cS }));
+  svg.appendChild(el("circle", { cx: X(o.cot), cy: Y(r.vMax), r: 4, fill: cStrut }));
+
+  svg.appendChild(el("text", { x: m.l + 8, y: m.t + ph - 8, fill: cS,
+    "font-size": 10 }, "V_sd (스터럽)"));
+  svg.appendChild(el("text", { x: m.l + 8, y: m.t + ph - 22, fill: cStrut,
+    "font-size": 10 }, "V_d,max (스트럿)"));
+
+  axisTitles(svg, W, H, m, "전단강도 (kN)", "cot θ");
+}
+
+function drawShearFn(o, r) {
+  const svg = document.getElementById("s-fn");
+  svg.innerHTML = "";
+  const W = 460, H = 300, m = { l: 58, r: 16, t: 24, b: 52 };
+  const pw = W - m.l - m.r, ph = H - m.t - m.b;
+  const grey = CSSVAR("--muted"), ink = CSSVAR("--ink");
+  const cRes = CSSVAR("--tens");
+
+  const fnMax = 0.2 * GIRDER.phiC * r.fck;
+  const fns = [];
+  for (let f = 0; f <= fnMax + 1e-9; f += fnMax / 60) fns.push(f);
+  const vals = fns.map(f => vcdDesign(r.fck, o.bw, r.d, r.ap, f, GIRDER.phiC) / 1e3);
+  const top = Math.max(...vals, r.vEd0) * 1.1;
+
+  const X = f => m.l + f / fnMax * pw;
+  const Y = v => m.t + ph - Math.min(v, top) / top * ph;
+
+  svg.appendChild(el("line", { x1: m.l, y1: m.t + ph, x2: m.l + pw, y2: m.t + ph, stroke: grey }));
+  svg.appendChild(el("line", { x1: m.l, y1: m.t, x2: m.l, y2: m.t + ph, stroke: grey }));
+  for (let i = 0; i <= 4; i++) {
+    const f = fnMax * i / 4, v = top * i / 4;
+    svg.appendChild(el("text", { x: X(f), y: m.t + ph + 17, "text-anchor": "middle",
+      fill: grey, "font-size": 10.5 }, f.toFixed(1)));
+    svg.appendChild(el("line", { x1: m.l, y1: Y(v), x2: m.l + pw, y2: Y(v),
+      stroke: grey, opacity: 0.2 }));
+    svg.appendChild(el("text", { x: m.l - 6, y: Y(v) + 4, "text-anchor": "end",
+      fill: grey, "font-size": 10 }, v.toFixed(0)));
+  }
+
+  svg.appendChild(path(fns.map((f, i) => [X(f), Y(vals[i])]),
+    { stroke: cRes, "stroke-width": 2.4 }));
+  svg.appendChild(el("line", { x1: m.l, y1: Y(r.vCd0), x2: m.l + pw, y2: Y(r.vCd0),
+    stroke: grey, "stroke-width": 1.6, "stroke-dasharray": "5 3" }));
+  svg.appendChild(el("text", { x: m.l + pw - 4, y: Y(r.vCd0) - 6, "text-anchor": "end",
+    fill: grey, "font-size": 10 }, `f_n = 0 일 때 ${r.vCd0.toFixed(0)}`));
+
+  svg.appendChild(el("circle", { cx: X(r.fn), cy: Y(r.vCd), r: 5, fill: cRes }));
+  svg.appendChild(el("text", { x: X(r.fn) + 8, y: Y(r.vCd) + 4, fill: ink,
+    "font-size": 10 }, `${r.vCd.toFixed(0)} kN`));
+
+  axisTitles(svg, W, H, m, "V_cd (kN)", "복부 평균 축압축 f_n (MPa)");
 }
 
 redrawAll();

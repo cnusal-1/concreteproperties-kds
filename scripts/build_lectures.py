@@ -19,7 +19,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from nbbuild import code, execute, md, write
+from nbbuild import FLOWCHART, code, execute, md, write
 
 LECTURES = Path(__file__).resolve().parents[1] / "docs" / "lectures"
 
@@ -30,6 +30,7 @@ EXPLORER_NOTE = """
 따라 바뀐다.
 :::
 """
+
 
 # 모든 강의 노트북의 준비 셀
 SETUP = '''
@@ -1589,11 +1590,11 @@ print("KDS 14 대조용 함수를 정의했다.")
 '''
 
 
-def nb_l4_deck():
-    """강의 L4 - 바닥판은 왜 따로 설계하는가."""
-    return write("L4_바닥판설계", [
+def nb_l4_deck_interior():
+    """강의 L4 - 바닥판 내측슬래브는 왜 따로 설계하는가."""
+    return write("L4_바닥판설계_내측슬래브", [
         md(r"""
-        # L4 · 바닥판 — 트럭을 굴리지 않고 푸는 법
+        # L4 · 바닥판 (내측슬래브) — 트럭을 굴리지 않고 푸는 법
 
         ## 이 시간에 답할 질문
 
@@ -1612,6 +1613,12 @@ def nb_l4_deck():
         2. 이 식은 무엇을 이미 삼키고 있는가?
         3. 바닥판을 두껍게 하면 정말 안전해지는가?
         4. 강도가 아니라 **균열**이 설계를 지배하는 순간은 언제인가?
+
+        :::{note}
+        이 편은 거더 사이의 **내측슬래브**만 다룬다. 바깥으로 내민
+        **외측슬래브(캔틸레버)** 는 식도 다르고 지배하는 하중도 달라서
+        [L5](L5_바닥판설계_외측슬래브.ipynb) 에서 따로 다룬다.
+        :::
 
         ## 근거 조문
 
@@ -1635,6 +1642,26 @@ def nb_l4_deck():
         **아래 코드가 하는 일** — 한글 글꼴을 등록하고 그림 색을 정한다.
         """),
         code(SETUP),
+        md(r"""
+        **아래 코드가 하는 일** — 이 편에서 따라갈 설계 흐름을 순서도로
+        그린다. 각 단계 옆에 근거 조문을 적었다.
+        """),
+        code(FLOWCHART + '''
+design_flowchart(
+"바닥판 내측슬래브 설계 흐름",
+[
+    ("바닥판 지간 결정", "24 10 11 4.6.2.3"),
+    ("두께·피복 결정", "24 14 21 4.6.5.1, 4.4.4"),
+    ("활하중 휨모멘트 (식 4.6-1)", "24 10 11 4.6.2.4"),
+    ("고정하중 휨모멘트 (표 4.6-2)", "24 10 11 4.6.2.7"),
+    ("충격 25 % 와 하중조합 극한Ⅰ", "24 12 21 표 4.4-1 · 24 12 11 표 4.1-1"),
+    ("휨 설계 — 소요 철근량", "24 14 21 4.1.1"),
+    ("최소 철근량·간격 검토", "24 14 21 4.6.5.3"),
+    ("균열 제어 (표 4.2-5)", "24 14 21 4.2.3.3"),
+    ("배력철근 120/√L ≤ 67 %", "24 14 21 4.6.5.3(2)"),
+],
+)
+        '''),
 
         md(r"""
         **아래 코드가 하는 일** — 바닥판 설계 함수를 불러오고 기준 조건을
@@ -2346,6 +2373,501 @@ def nb_l4_deck():
     ], directory=LECTURES)
 
 
+CANTILEVER_SETUP = r'''
+from concreteproperties_kds.kds import stress_block_parameters
+from concreteproperties_kds.kds24 import (
+    COMBINATIONS_BY_NAME,
+    WHEEL_LOAD,
+    bar_area,
+    cantilever_live_load_moment,
+    cantilever_wheel_width,
+    dead_load_moment,
+    design_compressive_strength,
+    design_yield_strength,
+    equivalent_block,
+    impact_factor,
+    live_load_moment,
+    max_bar_spacing,
+    minimum_flexural_steel,
+    nominal_cover,
+    provided_steel_area,
+    required_steel_area,
+)
+
+# 기준 조건 — 예제 17 의 교량과 같다
+CANTILEVER = 1.30     # 캔틸레버 길이 (m)        ← 바꿔 보라
+HAUNCH = 280.0        # 고정단 두께 (mm, 헌치)   ← 바꿔 보라
+GIRDER_SPACING = 2.5  # 내측 비교용 거더 간격 (m)
+THICKNESS = 240.0     # 내측 바닥판 두께 (mm)
+EXPOSURE = "ED1"      # 제설염에 노출               ← 바꿔 보라
+PAVEMENT = 80.0       # 포장 두께 (mm)
+BARRIER_LOAD = 8.0    # 방호벽 자중 (kN/m)         ← 바꿔 보라
+BARRIER_ARM = 0.25    # 방호벽 도심의 끝단 이격 (m)
+EDGE_TO_WHEEL = 0.30  # 차도 끝에서 최외측 차륜 (m, 4.6.2.3(3)⑤)
+FCK, FY = 27.0, 400.0
+GAMMA_C, GAMMA_P = 24.5, 22.5
+
+C_DEAD = "#5b6472"
+C_LIVE = "#1f6feb"
+C_CAP = "#1f7a4d"
+C_K14 = "#b3372c"
+C_LOAD = "#b3372c"
+C_MUTED = "#5b6472"
+
+
+def cantilever_moments(x_cant=CANTILEVER, haunch=HAUNCH, barrier=BARRIER_LOAD):
+    """캔틸레버 고정단의 하중별 휨모멘트를 돌려준다 (kN·m/m)."""
+    x_wheel = x_cant - EDGE_TO_WHEEL
+    m_dc = abs(dead_load_moment(w=GAMMA_C * haunch / 1000.0, span=x_cant,
+                                kind="캔틸레버판"))
+    m_dc += barrier * (x_cant - BARRIER_ARM)
+    m_dw = abs(dead_load_moment(w=GAMMA_P * PAVEMENT / 1000.0,
+                                span=x_cant - 0.5, kind="캔틸레버판"))
+    m_ll = cantilever_live_load_moment(x=x_wheel)
+    m_im = m_ll * (impact_factor() - 1.0)
+    return {"DC": m_dc, "DW": m_dw, "LL": m_ll, "IM": m_im}
+
+
+print(f"윤하중 P = {WHEEL_LOAD:.0f} kN,  캔틸레버 {CANTILEVER:.2f} m")
+print(f"최외측 차륜 위치 X = {CANTILEVER - EDGE_TO_WHEEL:.2f} m (고정단에서)")
+'''
+
+
+def nb_l5_deck_cantilever():
+    """강의 L5 - 바닥판 외측슬래브(캔틸레버)는 왜 더 두꺼운가."""
+    return write("L5_바닥판설계_외측슬래브", [
+        md(r"""
+        # L5 · 바닥판 (외측슬래브) — 왜 캔틸레버가 단면을 정하는가
+
+        ## 이 시간에 답할 질문
+
+        [L4](L4_바닥판설계_내측슬래브.ipynb) 에서 내측슬래브를 풀었다. 같은
+        다리의 **바깥으로 내민 부분**을 풀면 설계휨모멘트가 **2.1 배**가 된다.
+        철근도 D16@150 에서 D19@125 로 올라간다.
+
+        왜 이렇게 커지는가? 흔한 설명은 두 가지다.
+
+        > "방호벽 자중 때문이다."
+        > "윤하중이 좁은 폭에만 퍼지기 때문이다."
+
+        **둘 다 틀렸다.** 이 시간에는 계산으로 그것을 확인하고 진짜 원인을
+        찾는다.
+
+        1. 캔틸레버의 등가 분포폭은 내측보다 넓은가, 좁은가?
+        2. 방호벽은 증가분의 몇 %를 설명하는가?
+        3. 그렇다면 무엇이 캔틸레버를 지배하는가?
+        4. 고정단을 두껍게(헌치) 하는 것은 얼마나 효과가 있는가?
+        5. 실제 설계에서 캔틸레버 상부철근을 정하는 것은 정말 이 계산인가?
+
+        ## 근거 조문
+
+        | 내용 | 조문 |
+        |---|---|
+        | 최외측 차륜 위치 (차도 끝에서 300 mm) | KDS 24 10 11 4.6.2.3(3)⑤ |
+        | 캔틸레버 등가 분포폭 식 $(4.6\text{-}4)$ | KDS 24 10 11 4.6.2.5 |
+        | 내측 등가 분포폭 식 $(4.6\text{-}2)$ | KDS 24 10 11 4.6.2.4 |
+        | 고정하중 휨모멘트 표 4.6-2 (캔틸레버 $-wl^2/2$) | KDS 24 10 11 4.6.2.7 |
+        | 충격 25 % | KDS 24 12 21 표 4.4-1 |
+        | 하중조합 극한Ⅰ | KDS 24 12 11 표 4.1-1 |
+        | 피복두께 식 $(4.4\text{-}1)$, 표 4.4-4 | KDS 24 14 21 4.4.4 |
+        | 차량 충돌하중 (이 편의 범위 밖) | KDS 24 90 11 |
+        """, EXPLORER_NOTE),
+
+        md("""
+        ## 0. 준비
+
+        **아래 코드가 하는 일** — 한글 글꼴을 등록하고 그림 색을 정한다.
+        """),
+        code(SETUP),
+        md(r"""
+        **아래 코드가 하는 일** — 이 편에서 따라갈 설계 흐름을 순서도로
+        그린다. 각 단계 옆에 근거 조문을 적었다.
+        """),
+        code(FLOWCHART + '''
+design_flowchart(
+"바닥판 외측슬래브(캔틸레버) 설계 흐름",
+[
+    ("캔틸레버 길이·최외측 차륜 위치", "24 10 11 4.6.2.3(3)⑤"),
+    ("고정단 두께(헌치)·피복 결정", "24 14 21 4.6.5.1, 4.4.4"),
+    ("등가 분포폭 E = 0.8X + 1.14", "24 10 11 4.6.2.5"),
+    ("활하중 휨모멘트 M = P·X/E", "24 10 11 4.6.2.5"),
+    ("자중·방호벽 고정하중 (−wl²/2)", "24 10 11 4.6.2.7"),
+    ("충격 25 % 와 하중조합 극한Ⅰ", "24 12 21 표 4.4-1 · 24 12 11 표 4.1-1"),
+    ("상부철근 휨 설계", "24 14 21 4.1.1"),
+    ("차량 충돌하중 검토 (극단상황)", "24 90 11"),
+],
+)
+        '''),
+
+        md(r"""
+        **아래 코드가 하는 일** — 캔틸레버의 하중별 휨모멘트를 구하는 함수를
+        정의한다. 예제 17 과 같은 교량(캔틸레버 1.3 m, 고정단 280 mm)이다.
+        """),
+        code(CANTILEVER_SETUP),
+
+        md(r"""
+        ## 1. 분포폭 — 캔틸레버가 정말 좁은가
+
+        기준은 내측과 캔틸레버에 **다른 식**을 준다.
+
+        $$
+        \text{내측: } E = 1.2 + 0.06L \le 2.1 \,\text{m}
+        \qquad
+        \text{캔틸레버: } E = 0.8X + 1.14 \,\text{m}
+        $$
+
+        $L$ 은 거더 간격, $X$ 는 고정단에서 윤하중까지의 거리다.
+        직관은 "캔틸레버는 한쪽만 지지되니 힘이 퍼질 데가 없다 → 좁다"고
+        말한다. 넣어 보자.
+
+        **아래 코드가 하는 일** — 두 식을 나란히 계산한다.
+        """),
+        code(r'''
+        x_wheel = CANTILEVER - EDGE_TO_WHEEL
+        e_can = cantilever_wheel_width(x=x_wheel)
+        e_int = min(1.2 + 0.06 * GIRDER_SPACING, 2.1)
+
+        print(f"내측    L = {GIRDER_SPACING:.2f} m  ->  E = {e_int:.3f} m")
+        print(f"캔틸레버 X = {x_wheel:.2f} m  ->  E = {e_can:.3f} m")
+        print()
+        print(f"캔틸레버의 분포폭이 {e_can / e_int:.2f} 배 '넓다'.")
+        print()
+        print(f"{'X (m)':>7} {'캔틸레버 E':>12} | {'L (m)':>7} {'내측 E':>10}")
+        print("-" * 44)
+        for v in (0.5, 0.8, 1.0, 1.3, 1.6, 2.0):
+            print(f"{v:7.2f} {cantilever_wheel_width(x=v):12.3f} | "
+                  f"{v:7.2f} {min(1.2 + 0.06 * v, 2.1):10.3f}")
+        '''),
+
+        md(r"""
+        **읽는 법** — 직관이 틀렸다. 캔틸레버의 분포폭이 **1.44 배 넓다.**
+        게다가 $X$ 에 대한 기울기가 0.8 로, 내측의 0.06 보다 **13 배** 가파르다.
+
+        왜 이런가? 두 식이 재는 것이 다르기 때문이다.
+
+        - 내측의 $L$ 은 **지간**이다. 지간이 길어져도 윤하중이 퍼지는 폭은
+          크게 달라지지 않는다(그래서 기울기가 완만하고 2.1 m 에서 잘린다).
+        - 캔틸레버의 $X$ 는 **고정단에서 하중까지의 거리**다. 하중이 고정단에서
+          멀수록 힘이 부채꼴로 퍼질 여유가 생긴다(그래서 기울기가 가파르다).
+
+        분포폭만 보면 캔틸레버가 **유리하다.** 그런데도 모멘트는 크다.
+
+        ## 2. 그렇다면 무엇이 키우는가
+
+        **아래 코드가 하는 일** — 활하중 휨모멘트를 두 식으로 각각 구해
+        분해한다.
+        """),
+        code(r'''
+        m_ll_int = live_load_moment(span=GIRDER_SPACING, continuous=True)
+        m_ll_can = cantilever_live_load_moment(x=x_wheel)
+
+        print("내측    식 (4.6-1)  M = (L + 0.6) P / 9.6 x 0.8")
+        print(f"        = ({GIRDER_SPACING} + 0.6) x {WHEEL_LOAD:.0f} / 9.6 "
+              f"x 0.8 = {m_ll_int:.2f} kN·m/m")
+        print()
+        print("캔틸레버 식 (4.6-4)  M = P x X / E")
+        print(f"        = {WHEEL_LOAD:.0f} x {x_wheel:.2f} / {e_can:.3f} "
+              f"= {m_ll_can:.2f} kN·m/m")
+        print()
+        print(f"활하중만으로 이미 {m_ll_can / m_ll_int:.2f} 배다.")
+        print()
+        # 연속 0.8 배 혜택이 없다면 내측은 얼마였을까
+        m_ll_int_simple = live_load_moment(span=GIRDER_SPACING, continuous=False)
+        print(f"내측이 단순판이었다면      {m_ll_int_simple:.2f} kN·m/m")
+        print(f"연속판이라 0.8 배를 받아  {m_ll_int:.2f} kN·m/m")
+        print(f"  -> 연속 혜택만으로 {(1 - 0.8) * 100:.0f} % 를 덜어낸다.")
+        '''),
+
+        md(r"""
+        **읽는 법** — 활하중만으로 벌써 2.00 배다. 그 차이 24.7 kN·m/m 를
+        갈라 보면 이렇다.
+
+        - **연속판 0.8 배 혜택의 부재**: 6.2 (**25 %**). 캔틸레버는 한쪽만
+          고정된 외팔보라 모멘트를 나눠 가질 이웃 경간이 없다.
+        - **지렛대 팔과 식 자체의 차이**: 18.5 (**75 %**). 내측은 윤하중이
+          지간 어디에 놓이든 $(L+0.6)/9.6$ 이라는 완만한 계수로 들어가지만,
+          캔틸레버는 $P \cdot X$ 가 그대로 고정단에 걸린다.
+
+        즉 **주된 원인은 지렛대 팔이고, 연속 혜택은 그 다음**이다.
+
+        **아래 코드가 하는 일** — 방호벽이 정말 주범인지 확인한다. 방호벽을
+        빼고 다시 계산해 본다.
+        """),
+        code(r'''
+        base = cantilever_moments()
+        no_barrier = cantilever_moments(barrier=0.0)
+
+        m_ed = COMBINATIONS_BY_NAME["극한Ⅰ"].evaluate(loads=base)
+        m_ed_nb = COMBINATIONS_BY_NAME["극한Ⅰ"].evaluate(loads=no_barrier)
+
+        # 내측부 (L4 와 같은 조건)
+        w_dc_i = GAMMA_C * THICKNESS / 1000.0
+        w_dw_i = GAMMA_P * PAVEMENT / 1000.0
+        loads_int = {
+            "DC": abs(dead_load_moment(w=w_dc_i, span=GIRDER_SPACING,
+                                       kind="연속판_지간")),
+            "DW": abs(dead_load_moment(w=w_dw_i, span=GIRDER_SPACING,
+                                       kind="연속판_지간")),
+            "LL": m_ll_int,
+            "IM": m_ll_int * (impact_factor() - 1.0),
+        }
+        m_ed_int = COMBINATIONS_BY_NAME["극한Ⅰ"].evaluate(loads=loads_int)
+
+        print(f"내측부        M_Ed = {m_ed_int:7.2f} kN·m/m")
+        print(f"캔틸레버      M_Ed = {m_ed:7.2f} kN·m/m"
+              f"   ({m_ed / m_ed_int:.2f} 배)")
+        print(f"방호벽 없다면 M_Ed = {m_ed_nb:7.2f} kN·m/m")
+        print()
+        grow = m_ed - m_ed_int
+        by_barrier = m_ed - m_ed_nb
+        print(f"증가분 {grow:.1f} kN·m/m 중")
+        print(f"  방호벽이 설명하는 몫 {by_barrier:.1f} "
+              f"({by_barrier / grow * 100:.0f} %)")
+        print(f"  나머지               {grow - by_barrier:.1f} "
+              f"({(grow - by_barrier) / grow * 100:.0f} %)")
+        '''),
+
+        md(r"""
+        **읽는 법** — 방호벽이 설명하는 몫은 **15 %** 뿐이다. 나머지 85 % 는
+        활하중이다. "방호벽 때문"이라는 설명은 크기를 한참 잘못 짚은 것이다.
+
+        정리하면 캔틸레버가 커지는 이유는 이 순서다.
+
+        1. **지렛대 팔** $P \cdot X$ 가 고정단에 그대로 걸린다 (활하중 차이의 75 %)
+        2. **연속판의 0.8 배 혜택이 없다** — 외팔보에는 재분배할 이웃이 없다 (25 %)
+        3. 방호벽 자중 — 전체 증가분의 15 % 로, 작지만 있다
+
+        그리고 **분포폭은 오히려 유리하게 작용하고 있다.** 캔틸레버 식이
+        1.94 m 로 퍼뜨려 주지 않았다면 모멘트는 훨씬 컸을 것이다.
+
+        **아래 코드가 하는 일** — 세 성분의 기여를 막대로 그린다.
+        """),
+        code(r'''
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4.3))
+
+        # 왼쪽 — 하중 구성 비교
+        names = ["내측부", "캔틸레버"]
+        dc = [loads_int["DC"], base["DC"]]
+        dw = [loads_int["DW"], base["DW"]]
+        ll = [loads_int["LL"] + loads_int["IM"], base["LL"] + base["IM"]]
+
+        ax1.bar(names, dc, color=C_DEAD, label="고정 DC")
+        ax1.bar(names, dw, bottom=dc, color="#c9a227", label="고정 DW")
+        ax1.bar(names, ll, bottom=[a + b for a, b in zip(dc, dw)],
+                color=C_LIVE, label="활하중 + 충격")
+        for i, (a, b, c) in enumerate(zip(dc, dw, ll)):
+            ax1.text(i, a + b + c + 2, f"{a + b + c:.1f}", ha="center",
+                     fontsize=9)
+        ax1.set_ylabel("휨모멘트 (kN·m/m, 비계수)")
+        ax1.set_title("하중 구성 - 커진 것은 활하중이다")
+        ax1.legend(fontsize=9)
+        ax1.grid(axis="y", alpha=0.3)
+
+        # 오른쪽 — 분포폭
+        xs = np.linspace(0.3, 2.2, 100)
+        ax2.plot(xs, 0.8 * xs + 1.14, color=C_LIVE, lw=2.2,
+                 label="캔틸레버 E = 0.8X + 1.14")
+        ax2.plot(xs, np.minimum(1.2 + 0.06 * xs, 2.1), color=C_CAP, lw=2.2,
+                 label="내측 E = 1.2 + 0.06L (<= 2.1)")
+        ax2.plot([x_wheel], [e_can], "o", color=C_LIVE, ms=8)
+        ax2.plot([GIRDER_SPACING], [e_int], "o", color=C_CAP, ms=8)
+        ax2.annotate(f"{e_can:.2f} m", (x_wheel, e_can),
+                     textcoords="offset points", xytext=(8, -4), fontsize=9)
+        ax2.annotate(f"{e_int:.2f} m", (GIRDER_SPACING, e_int),
+                     textcoords="offset points", xytext=(-44, 4), fontsize=9)
+        ax2.set_xlabel("X 또는 L (m)")
+        ax2.set_ylabel("등가 분포폭 E (m)")
+        ax2.set_title("분포폭은 캔틸레버가 오히려 넓다")
+        ax2.legend(fontsize=8.5)
+        ax2.grid(alpha=0.3)
+
+        fig.tight_layout()
+        '''),
+
+        md(r"""
+        ## 3. 헌치 — 고정단을 두껍게 하면
+
+        캔틸레버는 고정단에서 모멘트가 최대이고 끝으로 갈수록 0 이다. 그래서
+        고정단만 두껍게 하는 **헌치**가 자연스럽다. 얼마나 듣는가?
+
+        **아래 코드가 하는 일** — 고정단 두께를 바꿔 가며 소요 철근량과
+        설계휨강도를 본다.
+        """),
+        code(r'''
+        def cantilever_design(haunch, dia=19.0, spacing=125.0):
+            """고정단 두께에 대한 소요·배치 철근량과 강도를 돌려준다."""
+            loads = cantilever_moments(haunch=haunch)
+            m_ed = COMBINATIONS_BY_NAME["극한Ⅰ"].evaluate(loads=loads)
+            _, cover = nominal_cover(exposure=EXPOSURE, bar_diameter=dia)
+            d = haunch - cover - dia / 2
+            as_req = required_steel_area(m_ed=m_ed * 1e6, d=d, fck=FCK, fy=FY)
+            as_prov = provided_steel_area(diameter=dia, spacing=spacing)
+            f_cd = design_compressive_strength(fck=FCK)
+            f_yd = design_yield_strength(fy=FY)
+            alpha, beta = equivalent_block(fck=FCK)
+            c = as_prov * f_yd / (alpha * f_cd * 1000.0)
+            m_rd = as_prov * f_yd * (d - beta * c) / 1e6
+            return m_ed, d, as_req, as_prov, m_rd
+
+        print(f"{'헌치':>7} {'d':>7} {'M_Ed':>8} {'필요 As':>9} "
+              f"{'M_Rd':>8} {'M_Rd/M_Ed':>10}")
+        print("-" * 56)
+        for h in (240.0, 260.0, 280.0, 300.0, 350.0, 400.0):
+            m_ed_h, d_h, as_req, as_prov, m_rd = cantilever_design(h)
+            print(f"{h:7.0f} {d_h:7.0f} {m_ed_h:8.1f} {as_req:9.0f} "
+                  f"{m_rd:8.1f} {m_rd / m_ed_h:10.2f}")
+        '''),
+
+        code(r'''
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4.3))
+
+        hs = np.arange(230.0, 405.0, 5.0)
+        med = np.array([cantilever_design(float(h))[0] for h in hs])
+        mrd = np.array([cantilever_design(float(h))[4] for h in hs])
+
+        ax1.plot(hs, mrd, color=C_CAP, lw=2.4, label="M_Rd (D19@125)")
+        ax1.plot(hs, med, color=C_LOAD, lw=2.4, label="M_Ed")
+        ax1.fill_between(hs, med, mrd, where=(mrd >= med), color=C_CAP,
+                         alpha=0.12, label="여유")
+        idx = int(np.argmax(mrd >= med))
+        if mrd[idx] >= med[idx]:
+            ax1.axvline(hs[idx], color=C_MUTED, ls=":", lw=1.4)
+            ax1.annotate(f"{hs[idx]:.0f} mm 부터 만족",
+                         (hs[idx], mrd.max() * 0.35), ha="center",
+                         fontsize=9, color=C_MUTED)
+        ax1.set_xlabel("고정단 두께 (헌치, mm)")
+        ax1.set_ylabel("휨모멘트 (kN·m/m)")
+        ax1.set_title("헌치는 강도를 올리고 자중도 데려온다")
+        ax1.legend(fontsize=9)
+        ax1.grid(alpha=0.3)
+
+        gain = (mrd[-1] - mrd[0]) / (hs[-1] - hs[0]) * 10
+        cost = (med[-1] - med[0]) / (hs[-1] - hs[0]) * 10
+        ax2.bar(["강도 증가", "하중 증가"], [gain, cost],
+                color=[C_CAP, C_LOAD], width=0.55)
+        for i2, v in enumerate([gain, cost]):
+            ax2.text(i2, v + gain * 0.03, f"{v:+.2f}", ha="center", fontsize=10)
+        ax2.set_ylabel("두께 10 mm 당 변화 (kN·m/m)")
+        ax2.set_title(f"자중이 이득의 {cost / gain * 100:.0f} % 를 가져간다")
+        ax2.grid(axis="y", alpha=0.3)
+
+        fig.tight_layout()
+        '''),
+
+        md(r"""
+        **읽는 법** — 헌치는 **두 방향으로 동시에 듣는다.** 두께가 늘면
+        $d$ 가 커져 강도가 오르고, 동시에 자중이 늘어 $M_{Ed}$ 도 오른다.
+        L4 의 내측슬래브에서는 자중이 이득의 4 % 만 갉아먹었는데, 캔틸레버는
+        자중이 $-wl^2/2$ 로 걸려 **더 많이** 갉아먹는다.
+
+        그래도 순효과는 뚜렷하다. 헌치가 캔틸레버 설계의 표준 수단인 이유다.
+
+        ## 4. 철근 배치 — 위쪽이다
+
+        내측슬래브는 지간부에서 아래가 인장이라 **하부철근**이 주철근이었다.
+        캔틸레버는 고정단에서 **위가 인장**이므로 **상부철근**이 주철근이다.
+
+        이 철근은 바닥판 상면 가까이 놓이는데, 그 위가 바로 **제설염이 닿는
+        면**이다. 그래서 노출등급이 피복을 크게 밀어올린다.
+
+        **아래 코드가 하는 일** — 노출등급별 피복과 그 대가를 본다.
+        """),
+        code(r'''
+        print(f"{'노출등급':>8} {'피복':>7} {'d':>7} {'M_Rd':>9} {'M_Rd/M_Ed':>10}")
+        print("-" * 46)
+        for cls in ("E0", "EC1", "EC2", "ED1", "ED3", "ES3"):
+            _, cover = nominal_cover(exposure=cls, bar_diameter=19.0)
+            d = HAUNCH - cover - 19.0 / 2
+            as_prov = provided_steel_area(diameter=19.0, spacing=125.0)
+            f_cd = design_compressive_strength(fck=FCK)
+            f_yd = design_yield_strength(fy=FY)
+            alpha, beta = equivalent_block(fck=FCK)
+            c = as_prov * f_yd / (alpha * f_cd * 1000.0)
+            m_rd = as_prov * f_yd * (d - beta * c) / 1e6
+            mark = "  <- 이 강의" if cls == EXPOSURE else ""
+            print(f"{cls:>8} {cover:7.0f} {d:7.0f} {m_rd:9.1f} "
+                  f"{m_rd / m_ed:10.2f}{mark}")
+        '''),
+
+        md(r"""
+        ## 5. 그런데 실제로는 무엇이 상부철근을 정하는가
+
+        여기까지 캔틸레버를 **활하중과 자중**으로 풀었다. 그런데 실무에서
+        캔틸레버 상부철근은 대개 이 계산으로 정해지지 않는다.
+
+        **차량 충돌하중**(KDS 24 90 11) 때문이다. 방호벽에 차량이 부딪히면
+        그 힘이 캔틸레버 고정단에 모멘트로 전달되는데, 이것은
+        **극단상황한계상태**로 검토한다. 등급에 따라 수백 kN 의 횡력이
+        방호벽 상단에 걸리므로, 고정단 모멘트가 이 강의의 130 kN·m/m 를
+        크게 넘는 경우가 많다.
+
+        > **설계의 의도** — 이 강의가 푼 것은 **하한**이다. 충돌하중은
+        > 극단상황이라 하중계수와 검토 방식이 다르고, 방호벽-바닥판 접합부의
+        > 상세가 함께 결정된다. 이 편의 범위 밖이지만, **캔틸레버 상부철근을
+        > 활하중만으로 확정해서는 안 된다**는 것은 기억해야 한다.
+
+        **아래 코드가 하는 일** — 참고로, 방호벽 상단에 횡력이 걸릴 때
+        고정단 모멘트가 어떻게 자라는지 크기만 가늠해 본다.
+        """),
+        code(r'''
+        # 방호벽 높이 (m) 와 가상의 횡력 — 실제 값은 KDS 24 90 11 의 등급을 따른다
+        H_BARRIER = 1.27
+        print("참고 — 방호벽 상단 횡력이 고정단에 만드는 모멘트")
+        print(f"{'횡력 (kN/m)':>12} {'M (kN·m/m)':>12} {'활하중 M_Ed 대비':>16}")
+        print("-" * 44)
+        for ft in (20.0, 50.0, 100.0, 150.0):
+            m_collision = ft * H_BARRIER
+            print(f"{ft:12.0f} {m_collision:12.1f} "
+                  f"{m_collision / m_ed:15.2f} 배")
+        print()
+        print("실제 검토는 극단상황한계상태 하중조합과 방호벽 자체의 저항")
+        print("(항복선 이론)까지 함께 보아야 한다. KDS 24 90 11 을 볼 것.")
+        '''),
+
+        md(r"""
+        ## 6. 바꿔 보며 확인할 것
+
+        1. `CANTILEVER` 를 0.8 m 로 줄이면 내측부와 어느 쪽이 지배하는가?
+           캔틸레버가 짧아지면 분포폭도 좁아진다는 점을 함께 보라.
+        2. `BARRIER_LOAD` 를 두 배로 올리면 $M_{Ed}$ 가 몇 % 오르는가?
+           방호벽이 주범이 아니라는 결론이 유지되는가?
+        3. `HAUNCH` 를 240 mm(내측과 같게)로 두면 D19@125 로 충분한가?
+        4. 노출등급을 `ES3` 로 바꾸면 헌치를 얼마나 키워야 원래 강도를
+           되찾는가?
+
+        ## 7. 정리
+
+        1. **캔틸레버의 등가 분포폭은 내측보다 넓다** (1.94 vs 1.35 m).
+           "좁은 폭에 몰린다"는 설명은 틀렸다. $X$ 에 대한 기울기가 0.8 로
+           내측의 0.06 보다 13 배 가파른데, 두 식이 재는 것이 다르기 때문이다.
+        2. **방호벽은 주범이 아니다.** 증가분의 대부분은 활하중이다.
+        3. **진짜 원인은 지렛대 팔(75 %)과 연속 혜택의 부재(25 %)다.**
+           방호벽은 전체 증가분의 15 % 에 그친다.
+        4. **헌치는 듣지만 자중을 데려온다.** 캔틸레버는 자중이 $-wl^2/2$ 로
+           걸려 내측보다 대가가 크다.
+        5. **주철근은 상부철근이고, 그 위가 제설염이 닿는 면이다.**
+           노출등급이 피복을 통해 강도를 직접 깎는다.
+        6. **이 계산은 하한이다.** 실제 캔틸레버 상부철근은 차량 충돌하중
+           (KDS 24 90 11, 극단상황한계상태)이 정하는 경우가 많다.
+
+        ## 8. 생각해 볼 문제
+
+        1. 캔틸레버 분포폭 식의 기울기가 0.8 로 가파른데, $X$ 가 0 에 가까워지면
+           $E \to 1.14$ m 로 수렴한다. 이 1.14 m 는 무엇을 뜻하는가?
+        2. 캔틸레버를 길게 하면 활하중 모멘트는 $P X / (0.8X + 1.14)$ 로
+           자란다. $X$ 가 매우 커지면 이 값은 어디로 수렴하는가? 그 극한값이
+           설계에 시사하는 바는?
+        3. 내측슬래브는 연속판이라 0.8 배를 받는다. 그런데 **최외측 거더 위**의
+           단면은 한쪽은 캔틸레버, 한쪽은 내측 경간이다. 이 지점의 부모멘트는
+           어느 쪽 규정을 따라야 하는가?
+        4. 헌치를 키우는 대신 캔틸레버를 짧게 하고 거더를 하나 더 놓는 방법도
+           있다. 두 선택의 대가를 무엇으로 견주어야 하는가?
+        5. 충돌하중이 상부철근을 정한다면, 이 강의가 푼 활하중 검토는 무의미한가?
+           그렇지 않다면 어떤 역할을 하는가?
+        """),
+    ], directory=LECTURES)
+
+
 GIRDER_SETUP = r'''
 from concreteproperties_kds.kds import stress_block_parameters
 from concreteproperties_kds.kds24 import (
@@ -2385,11 +2907,11 @@ print(f"기본 편심 e = y_b - {TENDON_COVER:.0f} = {props.y_b - TENDON_COVER:.
 '''
 
 
-def nb_l5_girder():
-    """강의 L5 - PSC 거더는 왜 사용한계상태가 정하는가."""
-    return write("L5_PSC거더설계", [
+def nb_l6_girder_flexure():
+    """강의 L6 - PSC 거더 휨설계. 왜 사용한계상태가 단면을 정하는가."""
+    return write("L6_PSC거더_휨설계", [
         md(r"""
-        # L5 · PSC 거더 — 강도가 남는데 왜 단면이 커지는가
+        # L6 · PSC 거더 휨설계 — 강도가 남는데 왜 단면이 커지는가
 
         ## 이 시간에 답할 질문
 
@@ -2406,6 +2928,11 @@ def nb_l5_girder():
         2. 편심은 클수록 좋은가? 그렇다면 왜 실제 거더는 텐던을 휘어 놓는가?
         3. 지간이 길어지면 어느 순간 지배하는 한계상태가 바뀐다. 언제, 왜?
         4. 같은 거더를 KDS 14 로 풀면 얼마나 다른가?
+
+        :::{note}
+        이 편은 **휨**만 다룬다. 전단은 프리스트레스가 강도에 직접 들어가는
+        방식부터 다르므로 [L7](L7_PSC거더_전단설계.ipynb) 에서 따로 다룬다.
+        :::
 
         ## 근거 조문
 
@@ -2434,6 +2961,26 @@ def nb_l5_girder():
         **아래 코드가 하는 일** — 한글 글꼴을 등록하고 그림 색을 정한다.
         """),
         code(SETUP),
+        md(r"""
+        **아래 코드가 하는 일** — 이 편에서 따라갈 설계 흐름을 순서도로
+        그린다. 각 단계 옆에 근거 조문을 적었다.
+        """),
+        code(FLOWCHART + '''
+design_flowchart(
+"PSC 거더 휨설계 흐름",
+[
+    ("거더 단면·합성 단면 성질", "24 14 21 4.6"),
+    ("하중별 저항 단면 구분", "24 10 11 4.6.3"),
+    ("활하중 KL-510 과 하중조합", "24 12 21 4.3 · 24 12 11 표 4.1-1"),
+    ("긴장응력 상한 (식 1.5-7)", "24 14 21 1.5.7.2"),
+    ("즉시 손실 — 마찰·정착·탄성", "24 14 21 1.5.7.4"),
+    ("장기 손실 (식 1.5-12)", "24 14 21 1.5.7.5, 3.3.2(7)"),
+    ("사용한계상태 응력 검토", "24 14 21 4.2.2"),
+    ("극한한계상태 휨강도", "24 14 21 4.1.1"),
+    ("텐던 배치 — 핵거리와 드레이프", "24 14 21 1.5.7.3"),
+],
+)
+        '''),
 
         md(r"""
         **아래 코드가 하는 일** — 거더 설계 함수를 불러오고 기준 조건을 정한다.
@@ -3039,7 +3586,502 @@ def nb_l5_girder():
     ], directory=LECTURES)
 
 
-BUILDERS = [nb_l1_block, nb_l2_phi, nb_l3_params, nb_l4_deck, nb_l5_girder]
+
+SHEAR_SETUP = r'''
+import math
+
+from concreteproperties_kds.kds24 import (
+    COT_THETA_MAX,
+    COT_THETA_MIN,
+    EXAMPLE_SECTIONS,
+    GAMMA_CONCRETE,
+    axial_stress,
+    design_concrete_shear_strength,
+    design_girder,
+    girder_live_load,
+    max_shear_strength,
+    maximum_stirrup_spacing,
+    minimum_shear_reinforcement_ratio,
+    required_stirrup_spacing,
+    shear_reinforcement_strength,
+)
+
+# L6 에서 설계한 그 거더다
+SECTION = EXAMPLE_SECTIONS["PSC-I 2.0m"]
+SPAN = 30.0
+STRAND, N_STRAND = 138.7, 25
+FCK = 40.0
+B_W = 290.0            # 복부 두께 (mm)          ← 바꿔 보라
+STIRRUP_AREA = 2 * 126.7   # D13 2가닥 (mm²)    ← 바꿔 보라
+F_VY = 400.0           # 스터럽 항복강도 (MPa)
+COT_THETA = 2.0        # 스트럿 경사             ← 바꿔 보라
+
+girder = design_girder(section=SECTION, span=SPAN, a_p=N_STRAND * STRAND)
+props = SECTION.properties()
+comp = girder.composite
+D_P = girder.d_p
+A_P = N_STRAND * STRAND
+
+# 복부의 평균 축압축 — 유효 프리스트레스를 합성 단면적으로 나눈다
+F_N = axial_stress(n_u=girder.p_e, a_c=comp.area, fck=FCK)
+
+# 단위길이 하중 (kN/m)
+W_TOTAL = (GAMMA_CONCRETE * props.area / 1e6
+           + GAMMA_CONCRETE * 2.5 * 0.24 + 3.0)
+
+C_CONC = "#1f7a4d"
+C_STEEL = "#1f6feb"
+C_LOAD = "#b3372c"
+C_MUTED = "#5b6472"
+
+
+def v_ed(x):
+    """지점에서 x (m) 떨어진 곳의 설계전단력 (kN). 극한Ⅰ."""
+    v_dc = W_TOTAL * (SPAN / 2 - x)
+    v_ll = girder_live_load(span=SPAN, section=x).shear * 0.6
+    return 1.25 * v_dc + 1.80 * v_ll
+
+
+print(f"{SECTION.name}  지간 {SPAN:.0f} m,  강연선 {N_STRAND} 가닥")
+print(f"복부 b_w = {B_W:.0f} mm,  d_p = {D_P:.0f} mm")
+print(f"유효 프리스트레스 P_e = {girder.p_e / 1e3:.0f} kN")
+print(f"복부 평균 축압축 f_n = {F_N:.2f} MPa")
+'''
+
+
+def nb_l7_girder_shear():
+    """강의 L7 - PSC 거더 전단설계. 프리스트레스가 강도에 직접 들어간다."""
+    return write("L7_PSC거더_전단설계", [
+        md(r"""
+        # L7 · PSC 거더 전단설계 — 프리스트레스가 강도가 되는 곳
+
+        ## 이 시간에 답할 질문
+
+        [L6](L6_PSC거더_휨설계.ipynb) 에서 휨을 풀었다. 거기서 프리스트레스는
+        **하중을 상쇄하는 역할**이었다 — 사용 시 하연 인장을 눌러 주었을 뿐,
+        극한 휨강도 $M_{Rd}$ 자체는 $A_p f_{pd}$ 로 정해졌다.
+
+        전단은 다르다. **프리스트레스가 콘크리트 전단강도 식에 직접 들어간다.**
+        이 강의에서 계산해 보면 같은 단면의 $V_{cd}$ 가 412 kN 에서
+        **666 kN 으로 61 % 오른다.** 프리스트레스를 무시하면 스터럽을
+        훨씬 많이 넣게 된다.
+
+        1. 프리스트레스는 왜 전단강도를 직접 올리는가?
+        2. **변각 트러스**에서 $\cot\theta$ 를 고르는 것은 설계자의 자유다.
+           그 자유의 대가는 무엇인가?
+        3. 휨은 지간 중앙이 지배하는데 전단은 어디가 지배하는가?
+        4. 스터럽이 필요 없는 구간은 정말 안 넣어도 되는가?
+
+        ## 근거 조문
+
+        | 내용 | 조문 |
+        |---|---|
+        | 전단철근 없는 부재의 $V_{cd}$ 식 $(4.1\text{-}7)$ | KDS 24 14 21 4.1.2.2 |
+        | $V_{cd}$ 하한 식 $(4.1\text{-}8)$ | KDS 24 14 21 4.1.2.2 |
+        | 비균열 구간 식 $(4.1\text{-}9)$ | KDS 24 14 21 4.1.2.2 |
+        | 변각 트러스 — 스터럽 식 $(4.1\text{-}16)$ | KDS 24 14 21 4.1.2.3 |
+        | 스트럿 파괴 상한 식 $(4.1\text{-}17)$ | KDS 24 14 21 4.1.2.3 |
+        | 압축강도 유효계수 $\nu$, $\alpha_{cw}$ 식 $(4.1\text{-}23)$ | KDS 24 14 21 4.1.2.3 |
+        | $1 \le \cot\theta \le 2.5$ | KDS 24 14 21 4.1.2.3 |
+        | 최소 전단철근과 최대 간격 | KDS 24 14 21 4.6.3 |
+        """, EXPLORER_NOTE),
+
+        md("""
+        ## 0. 준비
+
+        **아래 코드가 하는 일** — 한글 글꼴을 등록하고 그림 색을 정한다.
+        """),
+        code(SETUP),
+        md(r"""
+        **아래 코드가 하는 일** — 이 편에서 따라갈 설계 흐름을 순서도로
+        그린다. 각 단계 옆에 근거 조문을 적었다.
+        """),
+        code(FLOWCHART + '''
+design_flowchart(
+"PSC 거더 전단설계 흐름",
+[
+    ("설계전단력 V_Ed (극한Ⅰ)", "24 12 21 4.3 · 24 12 11 표 4.1-1"),
+    ("복부 축압축 f_n = P_e/A", "24 14 21 4.1.2.2"),
+    ("콘크리트 전단강도 V_cd (식 4.1-7)", "24 14 21 4.1.2.2"),
+    ("전단철근 필요 구간 판정", "24 14 21 4.1.2.2"),
+    ("cot θ 선택 (1 ≤ cot θ ≤ 2.5)", "24 14 21 4.1.2.3"),
+    ("스트럿 상한 V_d,max (식 4.1-17)", "24 14 21 4.1.2.3"),
+    ("스터럽 간격 (식 4.1-16)", "24 14 21 4.1.2.3"),
+    ("최소 전단철근·최대 간격", "24 14 21 4.6.3"),
+],
+)
+        '''),
+
+        md(r"""
+        **아래 코드가 하는 일** — L6 에서 설계한 거더를 그대로 불러오고,
+        전단 검토에 필요한 값(복부 두께, 유효깊이, 복부 축압축)을 준비한다.
+        """),
+        code(SHEAR_SETUP),
+
+        md(r"""
+        ## 1. 프리스트레스가 전단강도에 들어가는 자리
+
+        전단철근이 없는 부재의 설계전단강도는 식 $(4.1\text{-}7)$ 이다.
+
+        $$
+        V_{cd} = \left[ 0.85 \phi_c \kappa (\rho f_{ck})^{1/3}
+        + 0.15 f_n \right] b_w d
+        $$
+
+        마지막 항 $0.15 f_n$ 이 핵심이다. $f_n$ 은 **단면에 걸린 평균
+        축압축응력**이고, 프리스트레스가 바로 그것을 만든다.
+
+        왜 축압축이 전단강도를 올리는가? 전단균열은 복부의 **주인장응력**이
+        콘크리트 인장강도를 넘을 때 생긴다. 축압축이 걸려 있으면 모어원이
+        통째로 압축 쪽으로 밀려 주인장응력이 줄어든다. 같은 전단력에서
+        균열이 늦게 생기는 것이다.
+
+        **아래 코드가 하는 일** — 프리스트레스를 반영할 때와 무시할 때의
+        $V_{cd}$ 를 비교한다.
+        """),
+        code(r'''
+        v_cd_0 = design_concrete_shear_strength(
+            fck=FCK, b_w=B_W, d=D_P, a_s=A_P, f_n=0.0) / 1e3
+        v_cd = design_concrete_shear_strength(
+            fck=FCK, b_w=B_W, d=D_P, a_s=A_P, f_n=F_N) / 1e3
+
+        print(f"프리스트레스 무시 (f_n = 0)      V_cd = {v_cd_0:7.1f} kN")
+        print(f"프리스트레스 반영 (f_n = {F_N:.2f})   V_cd = {v_cd:7.1f} kN")
+        print(f"  -> {(v_cd / v_cd_0 - 1) * 100:+.0f} %")
+        print()
+        print("f_n 에 따른 V_cd")
+        print(f"{'f_n (MPa)':>10} {'V_cd (kN)':>11} {'증가율':>8}")
+        for fn in (0.0, 1.0, 2.0, F_N, 4.0, 6.0):
+            v = design_concrete_shear_strength(
+                fck=FCK, b_w=B_W, d=D_P, a_s=A_P, f_n=fn) / 1e3
+            mark = "  <- 이 거더" if abs(fn - F_N) < 1e-9 else ""
+            print(f"{fn:10.2f} {v:11.1f} {(v / v_cd_0 - 1) * 100:7.0f} %{mark}")
+        '''),
+
+        md(r"""
+        **읽는 법** — $f_n$ 이 선형으로 들어가므로 증가도 선형이다.
+        이 거더는 $f_n = 2.79$ MPa 로 $V_{cd}$ 가 **61 % 오른다.**
+
+        여기서 주의할 것이 있다. $f_n$ 은 **유효 프리스트레스** $P_e$ 로
+        계산해야 한다. L6 에서 본 대로 긴장한 힘의 21 % 는 사라지므로,
+        긴장력 $P_{jack}$ 을 쓰면 전단강도를 과대평가한다.
+
+        ## 2. 변각 트러스 — $\cot\theta$ 라는 자유
+
+        전단철근이 들어가면 KDS 24 는 **변각 트러스 모델**을 쓴다. 복부가
+        경사 압축 스트럿과 수직 스터럽으로 이루어진 트러스처럼 거동한다고
+        보는데, **스트럿의 경사각 $\theta$ 를 설계자가 고른다.**
+
+        $$
+        V_{sd} = \phi_s f_{vy} A_v \frac{z \cot\theta}{s}
+        \qquad
+        V_{d,\max} = \frac{\alpha_{cw} \nu \phi_c f_{ck} b_w z}
+        {\cot\theta + \tan\theta}
+        $$
+
+        $\cot\theta$ 를 키우면(스트럿을 눕히면) 한 균열을 가로지르는 스터럽이
+        많아져 $V_{sd}$ 가 **비례해서 커진다.** 공짜처럼 보인다.
+
+        그런데 같은 $\cot\theta$ 가 $V_{d,\max}$ 의 분모에 들어간다.
+        스트럿이 누울수록 **압축력이 커져 스트럿이 먼저 부서진다.**
+
+        **아래 코드가 하는 일** — 두 곡선을 함께 계산해 교차점을 찾는다.
+        """),
+        code(r'''
+        print(f"D13 2가닥 @150 mm 기준")
+        print(f"{'cot θ':>7} {'θ':>7} {'V_sd':>9} {'V_d,max':>10} {'지배':>12}")
+        print("-" * 50)
+        rows = []
+        for i in range(11):
+            cot = COT_THETA_MIN + (COT_THETA_MAX - COT_THETA_MIN) * i / 10
+            v_sd = shear_reinforcement_strength(
+                f_vy=F_VY, a_v=STIRRUP_AREA, d=D_P, s=150.0,
+                cot_theta=cot) / 1e3
+            v_max = max_shear_strength(
+                fck=FCK, b_w=B_W, d=D_P, cot_theta=cot) / 1e3
+            gov = "스트럿" if v_sd > v_max else "스터럽"
+            rows.append((cot, v_sd, v_max))
+            print(f"{cot:7.2f} {math.degrees(math.atan(1 / cot)):6.1f}° "
+                  f"{v_sd:9.0f} {v_max:10.0f} {gov:>12}")
+
+        # 교차점
+        cross = None
+        for a, b in zip(rows, rows[1:]):
+            if (a[1] - a[2]) * (b[1] - b[2]) < 0:
+                t = (a[2] - a[1]) / ((b[1] - a[1]) - (b[2] - a[2]))
+                cross = a[0] + t * (b[0] - a[0])
+                break
+        print()
+        if cross:
+            print(f"cot θ ≈ {cross:.2f} 를 넘으면 스터럽보다 스트럿이 먼저 깨진다.")
+            print("그 위로는 cot θ 를 키워도 강도가 늘지 않고 오히려 준다.")
+        '''),
+
+        md(r"""
+        **읽는 법** — $\cot\theta$ 를 키우는 것은 공짜가 아니다. 어느 지점을
+        넘으면 **스트럿이 먼저 부서져** 강도가 오히려 줄어든다.
+
+        기준이 $1 \le \cot\theta \le 2.5$ 로 범위를 묶어 둔 것도 이 때문이다.
+        하한 1.0($45°$)은 균열 방향에서 너무 벗어나지 않게 하는 것이고,
+        상한 2.5($21.8°$)는 스트럿이 지나치게 눕는 것을 막는다.
+
+        > **설계의 의도** — 변각 트러스가 주는 자유는 "스터럽을 아낄 자유"가
+        > 아니라 **"스터럽과 복부 두께를 맞바꿀 자유"**다. $\cot\theta$ 를
+        > 키워 스터럽을 줄이면 복부에 더 큰 압축이 걸리므로, 복부가 얇으면
+        > 그 자유를 쓸 수 없다.
+
+        **아래 코드가 하는 일** — 복부 두께를 바꿔 가며 쓸 수 있는
+        $\cot\theta$ 의 한계를 본다.
+        """),
+        code(r'''
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4.4))
+
+        cots = np.linspace(1.0, 2.5, 60)
+        v_sd_c = [shear_reinforcement_strength(f_vy=F_VY, a_v=STIRRUP_AREA,
+                                               d=D_P, s=150.0, cot_theta=c) / 1e3
+                  for c in cots]
+        v_max_c = [max_shear_strength(fck=FCK, b_w=B_W, d=D_P,
+                                      cot_theta=c) / 1e3 for c in cots]
+
+        ax1.plot(cots, v_sd_c, color=C_STEEL, lw=2.2, label="V_sd (스터럽)")
+        ax1.plot(cots, v_max_c, color=C_LOAD, lw=2.2, label="V_d,max (스트럿)")
+        ax1.fill_between(cots, 0, np.minimum(v_sd_c, v_max_c),
+                         color=C_CAP if False else "#1f7a4d", alpha=0.10,
+                         label="실제 저항")
+        if cross:
+            ax1.axvline(cross, color=C_MUTED, ls=":", lw=1.4)
+            ax1.annotate(f"교차 {cross:.2f}", (cross, max(v_max_c) * 0.95),
+                         ha="center", fontsize=9, color=C_MUTED)
+        ax1.set_xlabel("cot θ")
+        ax1.set_ylabel("전단강도 (kN)")
+        ax1.set_title("cot θ 를 키우면 스트럿이 먼저 걸린다")
+        ax1.legend(fontsize=9)
+        ax1.grid(alpha=0.3)
+
+        # 복부 두께에 따른 V_d,max
+        for bw, colour in [(240.0, "#c0392b"), (290.0, "#1f6feb"),
+                           (400.0, "#1f7a4d")]:
+            v = [max_shear_strength(fck=FCK, b_w=bw, d=D_P, cot_theta=c) / 1e3
+                 for c in cots]
+            ax2.plot(cots, v, lw=2.0, color=colour, label=f"b_w = {bw:.0f} mm")
+        ax2.plot(cots, v_sd_c, color=C_MUTED, lw=2.0, ls="--",
+                 label="V_sd (D13@150)")
+        ax2.set_xlabel("cot θ")
+        ax2.set_ylabel("V_d,max (kN)")
+        ax2.set_title("복부가 얇으면 cot θ 를 쓸 수 없다")
+        ax2.legend(fontsize=8.5)
+        ax2.grid(alpha=0.3)
+
+        fig.tight_layout()
+        '''),
+
+        md(r"""
+        ## 3. 어디가 지배하는가 — 휨과 정반대다
+
+        단순 지지 보에서 휨모멘트는 **중앙**에서 최대이고 전단력은
+        **지점**에서 최대다. 그래서 같은 거더인데 **설계를 지배하는 위치가
+        정반대**다.
+
+        **아래 코드가 하는 일** — 지간을 따라 $V_{Ed}$ 와 $V_{cd}$ 를 그려
+        스터럽이 필요한 구간을 찾는다.
+        """),
+        code(r'''
+        print(f"{'위치 (m)':>9} {'V_Ed (kN)':>11} {'V_cd (kN)':>11} {'스터럽':>9}")
+        print("-" * 44)
+        for x in (0.0, 1.0, 2.0, 3.0, 5.0, 7.5, 10.0, 12.0, 15.0):
+            v = v_ed(x)
+            print(f"{x:9.1f} {v:11.0f} {v_cd:11.1f} "
+                  f"{'필요' if v > v_cd else '불필요':>9}")
+
+        # 스터럽이 필요 없어지는 위치
+        xs = np.linspace(0, SPAN / 2, 400)
+        vs = np.array([v_ed(float(x)) for x in xs])
+        idx = np.argmax(vs <= v_cd)
+        x_free = float(xs[idx]) if vs[idx] <= v_cd else None
+        print()
+        if x_free:
+            print(f"x ≈ {x_free:.1f} m 부터 계산상 스터럽이 필요 없다 "
+                  f"(지간의 {x_free / SPAN * 100:.0f} %).")
+            print("다만 '필요 없다'와 '넣지 않는다'는 다르다 — 5절을 볼 것.")
+        '''),
+        code(r'''
+        fig, ax = plt.subplots(figsize=(10, 4.4))
+
+        ax.plot(xs, vs, color=C_LOAD, lw=2.4, label="V_Ed (극한Ⅰ)")
+        ax.axhline(v_cd, color=C_CONC, lw=2.2, label=f"V_cd = {v_cd:.0f} kN")
+        ax.fill_between(xs, v_cd, vs, where=(vs > v_cd), color=C_LOAD,
+                        alpha=0.14, label="스터럽이 받아야 할 몫")
+        if x_free:
+            ax.axvline(x_free, color=C_MUTED, ls=":", lw=1.4)
+            ax.annotate(f"x = {x_free:.1f} m", (x_free, vs.max() * 0.9),
+                        ha="center", fontsize=9, color=C_MUTED)
+
+        # 참고 — 휨모멘트는 반대로 중앙이 최대다
+        ax2 = ax.twinx()
+        m = [1.25 * W_TOTAL * x * (SPAN - x) / 2
+             + 1.80 * girder_live_load(span=SPAN).moment * 0.6
+             * (4 * x * (SPAN - x) / SPAN**2) for x in xs]
+        ax2.plot(xs, m, color=C_MUTED, lw=1.6, ls="--", alpha=0.75,
+                 label="M_Ed (참고, 오른쪽 축)")
+        ax2.set_ylabel("휨모멘트 (kN·m)", color=C_MUTED)
+        ax2.tick_params(axis="y", labelcolor=C_MUTED)
+
+        ax.set_xlabel("지점에서의 거리 (m)")
+        ax.set_ylabel("전단력 (kN)")
+        ax.set_title("전단은 지점이, 휨은 중앙이 지배한다")
+        ax.set_xlim(0, SPAN / 2)
+        ax.set_ylim(0, vs.max() * 1.1)
+        ax.legend(loc="upper right", fontsize=9)
+        ax.grid(alpha=0.3)
+        fig.tight_layout()
+        '''),
+
+        md(r"""
+        **읽는 법** — 두 곡선이 정확히 반대로 간다. 붉은 영역이 스터럽이
+        받아야 할 몫이고, 지간의 약 30 % 구간에만 나타난다.
+
+        이것이 PSC 거더의 배근이 **단부에 촘촘하고 중앙에 성긴** 이유다.
+        그리고 L6 에서 본 대로 **텐던은 반대로** 중앙에서 편심이 크고 단부에서
+        핵 안으로 들어온다. 두 배근이 서로 어긋나 있는 셈이다.
+
+        ## 4. 스터럽 배치
+
+        **아래 코드가 하는 일** — 위치별로 필요한 스터럽 간격을 구하고,
+        최소 전단철근·최대 간격 규정과 견주어 채택값을 정한다.
+        """),
+        code(r'''
+        s_max = maximum_stirrup_spacing(d=D_P)
+        rho_min = minimum_shear_reinforcement_ratio(fck=FCK, f_y=F_VY)
+        s_rho = STIRRUP_AREA / (rho_min * B_W)
+
+        print(f"최대 간격 규정        {s_max:.0f} mm")
+        print(f"최소 전단철근비       {rho_min * 100:.3f} %  ->  간격 {s_rho:.0f} mm 이하")
+        print(f"실제 상한 = min       {min(s_max, s_rho):.0f} mm")
+        print()
+        print(f"{'위치':>6} {'V_Ed':>8} {'V_sd 소요':>10} {'필요 간격':>10} "
+              f"{'채택':>8}")
+        print("-" * 48)
+        layout = []
+        for x in (0, 1, 2, 3, 4, 5, 7.5, 10, 12, 15):
+            v = v_ed(float(x))
+            need = v - v_cd
+            if need <= 0:
+                s_adopt = min(s_max, s_rho)
+                print(f"{x:6.1f} {v:8.0f} {'-':>10} {'불필요':>10} "
+                      f"{s_adopt:8.0f}")
+            else:
+                s_req = required_stirrup_spacing(
+                    v_ed=need * 1e3, d=D_P, a_v=STIRRUP_AREA,
+                    cot_theta=COT_THETA)
+                s_adopt = min(s_req, s_max, s_rho)
+                print(f"{x:6.1f} {v:8.0f} {need:10.0f} {s_req:10.0f} "
+                      f"{s_adopt:8.0f}")
+            layout.append((x, s_adopt))
+        '''),
+
+        md(r"""
+        **읽는 법** — 지점에서 약 510 mm, 중앙부에서는 **최소 전단철근이
+        정하는 691 mm** 다. 계산상 필요 없는 구간에서도 간격의 상한이 걸리는
+        것이다.
+
+        ## 5. "필요 없다"와 "넣지 않는다"는 다르다
+
+        3절에서 지간의 70 % 는 계산상 스터럽이 필요 없다고 나왔다. 그렇다고
+        정말 안 넣지는 않는다. 기준이 **최소 전단철근**을 요구하기 때문이다.
+
+        이유는 전단 파괴의 성격에 있다. 휨 파괴는 철근이 항복하며 처짐이
+        크게 자라 **예고**가 있지만, 전단 파괴는 사인장균열이 갑자기 열리며
+        **예고 없이** 온다. $V_{cd}$ 식 자체가 실험의 회귀식이라 흩어짐도 크다.
+
+        > **설계의 의도** — 최소 전단철근은 강도를 위한 것이 아니라 **취성
+        > 파괴를 막기 위한 것**이다. $V_{Ed}$ 가 $V_{cd}$ 보다 작아도, 계산이
+        > 빗나갔을 때 부재가 조용히 무너지지 않도록 붙잡아 둔다.
+
+        ## 6. KDS 14 로 풀면
+
+        같은 단면을 강도설계법으로 풀면 얼마나 다른가?
+
+        **아래 코드가 하는 일** — KDS 14 20 22 의 $V_c$ 와 견준다. KDS 14 는
+        프리스트레스를 $V_c$ 식에 다른 방식으로 반영하므로, 여기서는
+        **전단철근이 없을 때의 콘크리트 몫**만 형식적으로 견준다.
+        """),
+        code(r'''
+        # KDS 14 — 간이식 V_c = (1/6) sqrt(f_ck) b_w d, phi = 0.75
+        v_c_14 = 0.75 * (1 / 6) * math.sqrt(FCK) * B_W * D_P / 1e3
+
+        print(f"KDS 14  φV_c = 0.75 x (1/6)√f_ck b_w d = {v_c_14:7.1f} kN")
+        print(f"KDS 24  V_cd (f_n = 0)                 = {v_cd_0:7.1f} kN")
+        print(f"KDS 24  V_cd (f_n = {F_N:.2f})              = {v_cd:7.1f} kN")
+        print()
+        print(f"프리스트레스를 빼면 KDS 24 가 KDS 14 의 "
+              f"{v_cd_0 / v_c_14 * 100:.0f} % 로 낮고,")
+        print(f"넣으면 {v_cd / v_c_14 * 100:.0f} % 로 뒤집힌다.")
+        print()
+        print("KDS 14 의 간이식은 f_ck 만 보고 철근비도 축응력도 보지 않는다.")
+        print("KDS 24 는 ρ 와 f_n 을 모두 넣어 부재의 조건을 반영한다.")
+        '''),
+
+        md(r"""
+        **읽는 법** — 프리스트레스를 무시하면 KDS 24 가 더 보수적인데,
+        반영하면 뒤집힌다. **PSC 부재에서 두 기준의 차이는 축응력 항이
+        만든다.**
+
+        (KDS 14 20 60 은 PSC 부재에 대해 $V_{ci}$ / $V_{cw}$ 를 따로 두는
+        상세식을 갖고 있다. 위 비교는 간이식만 형식적으로 견준 것이므로
+        실제 KDS 14 설계값과는 다르다.)
+
+        ## 7. 바꿔 보며 확인할 것
+
+        1. `B_W` 를 240 mm(EX거더 최소 복부두께)로 줄이면 쓸 수 있는
+           $\cot\theta$ 의 상한이 얼마나 내려가는가?
+        2. `COT_THETA` 를 2.5 로 올리면 스터럽 간격이 얼마나 벌어지는가?
+           그때 $V_{d,\max}$ 가 $V_{Ed}$ 를 여전히 넘는가?
+        3. `STIRRUP_AREA` 를 D16 2가닥으로 올리면 지점부 간격이 얼마가 되는가?
+        4. `N_STRAND` 를 줄여 $f_n$ 을 낮추면 스터럽이 필요한 구간이
+           얼마나 길어지는가?
+
+        ## 8. 정리
+
+        1. **프리스트레스는 전단강도에 직접 들어간다.** 식 $(4.1\text{-}7)$ 의
+           $0.15 f_n$ 항이 이 거더에서 $V_{cd}$ 를 **61 % 올린다.** 휨에서는
+           없던 효과다.
+        2. **$f_n$ 은 유효 프리스트레스로 계산해야 한다.** 손실 21 % 를
+           빠뜨리면 전단강도를 과대평가한다.
+        3. **$\cot\theta$ 는 공짜가 아니다.** 키우면 스터럽이 줄지만 스트럿
+           압축이 커져, 어느 지점을 넘으면 스트럿이 먼저 부서진다.
+           복부가 얇을수록 그 지점이 빨리 온다.
+        4. **전단은 지점이, 휨은 중앙이 지배한다.** 스터럽은 단부에 촘촘하고
+           텐던 편심은 중앙에서 크다 — 두 배근이 서로 어긋난다.
+        5. **계산상 필요 없어도 최소 전단철근은 넣는다.** 전단 파괴는 예고가
+           없기 때문이다.
+
+        ## 9. 생각해 볼 문제
+
+        1. $V_{cd}$ 식의 $f_n$ 항은 축압축이 클수록 무한정 커지는가? 기준이
+           상한을 두는 이유는 무엇일까?
+        2. 텐던을 드레이프하면 단부에서 텐던이 위로 올라간다. 이때 텐던의
+           **수직 성분**이 전단력을 직접 덜어 준다. 이 강의는 그 효과를
+           넣지 않았는데, 넣으면 결과가 어떻게 달라지겠는가?
+        3. 최소 전단철근이 취성 파괴를 막기 위한 것이라면, 그 양은 무엇을
+           기준으로 정해야 하는가? 현재 규정은 $f_{ck}$ 와 $f_y$ 만 본다.
+        4. 합성 거더에서 바닥판과 거더 사이의 **수평전단**은 이 강의가 다루지
+           않았다. 그 검토가 왜 따로 필요한가?
+        5. 지점 근처에서는 하중이 스트럿을 통해 지점으로 직접 흐른다
+           (아치작용). 기준이 지점에서 $d$ 이내를 달리 취급하는 근거는
+           무엇인가?
+        """),
+    ], directory=LECTURES)
+
+
+BUILDERS = [
+    nb_l1_block,
+    nb_l2_phi,
+    nb_l3_params,
+    nb_l4_deck_interior,
+    nb_l5_deck_cantilever,
+    nb_l6_girder_flexure,
+    nb_l7_girder_shear,
+]
 
 
 def main() -> int:

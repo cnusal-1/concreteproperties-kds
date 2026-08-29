@@ -234,6 +234,7 @@ def main() -> None:
     rule("⑥ 캔틸레버부 (헌치 포함)")
     x_wheel = CANTILEVER - 0.3  # 최외측 차륜은 차도 끝에서 300 mm (4.6.2.3(3)⑤)
     e_width = cantilever_wheel_width(x=x_wheel)
+    e_in = min(1.2 + 0.06 * span, 2.1)  # 내측 등가분포폭, 식 (4.6-2)
     dia_c, spacing_c = 19.0, 125.0
     _, cover_c = nominal_cover(exposure=EXPOSURE, bar_diameter=dia_c)
     d_c = HAUNCH - cover_c - dia_c / 2
@@ -271,8 +272,10 @@ def main() -> None:
     dead_c = (m_dc_c + m_dw_c) / (m_dc_c + m_dw_c + m_ll_c + m_im_c) * 100
     print()
     print(f"캔틸레버 M_Ed 가 내측부의 {m_ed_c / m_ed:.1f} 배다.")
-    print(f"증가분 {m_ed_c - m_ed:.1f} 중 {grow_ll:.0f} % 가 활하중이다 - 연속판의")
-    print("0.8배 혜택이 없고, 윤하중이 좁은 폭에 긴 지렛대 팔로 걸린다.")
+    print(f"증가분 {m_ed_c - m_ed:.1f} 중 {grow_ll:.0f} % 가 활하중이다.")
+    print(f"분포폭은 오히려 캔틸레버가 넓다 ({e_width:.2f} vs 내측 {e_in:.2f} m).")
+    print("원인은 폭이 아니라 (가) 연속판의 0.8배 혜택이 없다는 것과")
+    print("(나) 윤하중이 긴 지렛대 팔로 걸린다는 것이다.")
     print(f"고정하중의 몫은 {dead_in:.0f} % 에서 {dead_c:.0f} % 로 늘 뿐이다.")
 
     # ── ⑦ 배력철근 ────────────────────────────────────────────────────────

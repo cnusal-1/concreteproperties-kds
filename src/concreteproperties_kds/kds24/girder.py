@@ -326,6 +326,8 @@ class GirderCheck:
         limits: 단계별 (압축 한계, 인장 한계) (MPa)
         m_rd: 설계휨강도 (kN·m)
         m_ed: 설계휨모멘트 (kN·m)
+        e: 실제로 쓴 긴장재 편심 (mm). 거더 도심에서 아래로 잰다.
+        d_p: 합성 단면 상연에서 긴장재까지의 유효깊이 (mm)
         flanged: 압축부가 바닥판을 넘어 거더로 들어갔는지 여부
         c_n: 중립축 깊이 (mm), 합성 단면 상연 기준
         checks: 검토 항목별 통과 여부
@@ -341,6 +343,8 @@ class GirderCheck:
     limits: dict[str, tuple[float, float]]
     m_rd: float
     m_ed: float
+    e: float = 0.0
+    d_p: float = 0.0
     flanged: bool = False
     c_n: float = 0.0
     checks: dict[str, bool] = field(default_factory=dict)
@@ -630,6 +634,8 @@ def design_girder(
         limits=limits,
         m_rd=m_rd,
         m_ed=m_ed,
+        e=e,
+        d_p=d_p,
         flanged=flanged,
         c_n=c_n,
         checks=checks,
