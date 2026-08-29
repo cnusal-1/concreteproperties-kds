@@ -167,7 +167,7 @@ def nb_l1_block():
 
         둘 중 어느 쪽을 써도 좋다. 이 시간에는 두 관계를 직접 그려 비교하고,
         차이가 어디서 커지는지 확인한다.
-        """ + EXPLORER_NOTE),
+        """, EXPLORER_NOTE),
 
         md("""
         ## 0. 준비
@@ -315,40 +315,126 @@ def nb_l1_block():
         결과**다. 완전히 1 이 아닌 것은 표 값을 실용적인 자리수로 반올림했기
         때문이다.
 
-        **아래 코드가 하는 일** — 두 응력분포를 단면 압축부 위에 겹쳐 그린다.
-        모양은 전혀 다른데 면적(빗금)과 도심(가로 화살표)이 거의 같다는 것을
-        눈으로 확인한다.
+        **아래 코드가 하는 일** — 400 × 600 단철근 보의 극한상태를 실제로 풀어
+        중립축 깊이 $c$ 를 구한 뒤, 세 장면을 같은 높이 축에 나란히 그린다.
+
+        1. **단면** — 압축연단이 위, 인장철근이 아래. 중립축 위쪽 빗금이 압축부다.
+        2. **변형률** — 평면유지 가정이므로 직선이다. 압축연단에서
+           $\varepsilon_{cu}$, 철근 위치에서 $\varepsilon_t$.
+        3. **압축응력** — 그 변형률에 대응하는 응력. 포물선-직선과 등가블록을
+           겹쳐 놓았다.
+
+        세 그림의 세로 위치가 서로 맞으므로, 어느 높이의 변형률이 어떤 응력을
+        만드는지 눈으로 따라갈 수 있다.
         """),
         code("""
-        fck = 27
-        c = 100.0  # 중립축 깊이 (mm) ← 바꿔 보라
+        fck, fy, n_bar = 27, 400, 4     # ← 값을 바꿔 보라
+        H, B, COVER = 600.0, 400.0, 50.0
+
+        # 실제 극한상태를 풀어 중립축 깊이를 얻는다
+        kds_b = beam(fck=fck, fy=fy, n_bar=n_bar, d=H, b=B, cover=COVER)
+        _, u_res, _ = kds_b.ultimate_bending_capacity()
+        c = u_res.d_n
+        d_eff = depth(kds_b)
+
         n, eps_co, eps_cu, alpha, beta = parabolic_parameters(fck)
         _, eta, beta_1 = stress_block_parameters(fck)
-
-        y = np.linspace(0, c, 300)              # 압축연단에서의 거리
-        eps = eps_cu * (1 - y / c)              # 변형률은 선형 분포
-        f_para = np.array([parabolic_stress(fck, e) for e in eps])
-
-        fig, ax = plt.subplots(figsize=(6.4, 4.6))
-        ax.fill_betweenx(y, 0, f_para, color="#1b4f7f", alpha=0.18)
-        ax.plot(f_para, y, color="#1b4f7f", lw=2, label="포물선-직선  4.1.1(7)")
-
         a = beta_1 * c
-        ax.plot([0, eta * 0.85 * fck, eta * 0.85 * fck, 0], [a, a, 0, 0],
-                color="#ad3327", lw=2, ls="--", label="등가블록  4.1.1(8)")
+        f_blk = eta * 0.85 * fck
 
-        for pos, colour, lab, dy in [
-            (beta * c, "#1b4f7f", f"포물선 도심  βc = {beta * c:.1f} mm", 3.0),
-            (a / 2, "#ad3327", f"블록 도심  a/2 = {a / 2:.1f} mm", -8.0),
-        ]:
-            ax.axhline(pos, color=colour, lw=0.9, ls=":")
-            ax.text(0.6, pos + dy, lab, color=colour, fontsize=9)
+        y_na = H - c            # 중립축의 높이 (바닥 기준)
+        y_bar = H - d_eff       # 인장철근의 높이
+        eps_t = eps_cu * (d_eff - c) / c
 
+        fig = plt.figure(figsize=(12.5, 5.2))
+        gs = fig.add_gridspec(1, 4, width_ratios=[1.0, 1.0, 1.0, 1.5], wspace=0.32)
+        axes = [fig.add_subplot(gs[0])]
+        axes += [fig.add_subplot(gs[k], sharey=axes[0]) for k in (1, 2)]
+        zoom = fig.add_subplot(gs[3])
+
+        # ── (1) 단면 ──────────────────────────────────────────────────
+        ax = axes[0]
+        ax.add_patch(plt.Rectangle((0, 0), B, H, fill=False, ec="k", lw=1.6))
+        ax.add_patch(plt.Rectangle((0, y_na), B, c, facecolor="#1b4f7f",
+                                   alpha=0.18, ec="none"))
+        for i_bar in range(n_bar):
+            x = COVER + 11 + i_bar * (B - 2 * (COVER + 11)) / max(n_bar - 1, 1)
+            ax.plot([x], [y_bar], "o", color="#333", ms=9)
+        ax.axhline(y_na, color=C_COMP, lw=1.4, ls="--")
+        ax.text(B / 2, y_na + 12, "중립축", color=C_COMP, ha="center", fontsize=9)
+        ax.annotate("", xy=(-34, H), xytext=(-34, y_na),
+                    arrowprops=dict(arrowstyle="<->", color=C_COMP, lw=1.1))
+        ax.text(-44, (H + y_na) / 2, f"c = {c:.0f}", rotation=90, ha="right",
+                va="center", color=C_COMP, fontsize=9)
+        ax.set_xlim(-90, B + 100)
+        ax.set_title(f"단면  {B:.0f} × {H:.0f}, {n_bar}-D22")
+        ax.set_ylabel("단면 바닥에서의 높이 (mm)")
+        ax.set_xticks([])
+        ax.grid(False)
+
+        # ── (2) 변형률 ────────────────────────────────────────────────
+        ax = axes[1]
+        ax.axvline(0, color="k", lw=1.0)
+        ax.plot([eps_cu, -eps_t], [H, y_bar], color="#1b4f7f", lw=2)
+        ax.axhline(y_na, color=C_COMP, lw=1.0, ls="--")
+        ax.plot([eps_cu], [H], "o", color="#1b4f7f", ms=6)
+        ax.plot([-eps_t], [y_bar], "o", color=C_TENS, ms=6)
+        ax.text(eps_cu, H + 14, f"εcu = {eps_cu:.4f}", ha="right",
+                color="#1b4f7f", fontsize=9)
+        ax.text(-eps_t, y_bar - 30, f"εt = {eps_t:.4f}", ha="left",
+                color=C_TENS, fontsize=9)
+        ax.set_title("변형률 (평면유지)")
+        ax.set_xlabel("변형률")
+        ax.set_xlim(-eps_t * 1.35, eps_cu * 2.2)
+
+        # ── (3) 압축응력 (단면 전체 높이) ─────────────────────────────
+        yy = np.linspace(y_na, H, 300)
+        f_para = np.array([parabolic_stress(fck, eps_cu * (h - y_na) / c) for h in yy])
+
+        ax = axes[2]
+        ax.fill_betweenx(yy, 0, f_para, color="#1b4f7f", alpha=0.18)
+        ax.plot(f_para, yy, color="#1b4f7f", lw=2)
+        ax.plot([0, f_blk, f_blk, 0], [H - a, H - a, H, H],
+                color=C_COMP, lw=1.8, ls="--")
+        ax.axhline(y_na, color=C_COMP, lw=1.0, ls="--")
+        ax.add_patch(plt.Rectangle((0, y_na - 6), f_blk * 1.45, c + 12,
+                                   fill=False, ec="#888", lw=1.0, ls=":"))
+        ax.set_title("압축응력")
         ax.set_xlabel("압축응력 (MPa)")
-        ax.set_ylabel("압축연단에서의 거리 (mm)")
-        ax.set_title(f"두 응력분포 — fck {fck} MPa, 중립축 c = {c:.0f} mm")
-        ax.legend(loc="upper right", fontsize=9)
-        ax.set_ylim(0, c * 1.12)
+        ax.set_xlim(0, f_blk * 1.75)
+
+        # ── (4) 압축부 확대 ───────────────────────────────────────────
+        zoom.fill_betweenx(yy, 0, f_para, color="#1b4f7f", alpha=0.18)
+        zoom.plot(f_para, yy, color="#1b4f7f", lw=2.4, label="포물선-직선  4.1.1(7)")
+        zoom.plot([0, f_blk, f_blk, 0], [H - a, H - a, H, H],
+                  color=C_COMP, lw=2, ls="--", label="등가블록  4.1.1(8)")
+        zoom.axhline(y_na, color=C_COMP, lw=1.0, ls="--")
+        zoom.text(f_blk * 0.02, y_na + 2, "중립축", color=C_COMP, fontsize=9)
+
+        for y_res, colour, lab, dy in [
+            (H - beta * c, "#1b4f7f", f"포물선 합력 βc = {beta * c:.1f} mm", 6),
+            (H - a / 2, C_COMP, f"블록 합력 a/2 = {a / 2:.1f} mm", -12),
+        ]:
+            zoom.annotate("", xy=(f_blk * 0.5, y_res), xytext=(f_blk * 0.5, y_res + 26),
+                          arrowprops=dict(arrowstyle="-|>", color=colour, lw=1.8))
+            zoom.plot([0, f_blk * 1.25], [y_res, y_res], color=colour, lw=0.9, ls=":")
+            zoom.text(f_blk * 1.28, y_res + dy, lab, color=colour, fontsize=9, va="center")
+
+        zoom.set_title("압축부 확대 — 면적과 도심이 같다")
+        zoom.set_xlabel("압축응력 (MPa)")
+        zoom.set_ylabel("높이 (mm)")
+        zoom.set_xlim(0, f_blk * 2.4)
+        zoom.set_ylim(y_na - 10, H + 10)
+        zoom.legend(loc="lower right", fontsize=9)
+
+        axes[0].set_ylim(-25, H + 60)
+        fig.tight_layout()
+
+        print(f"중립축 c = {c:.1f} mm,  압축블록 a = {a:.1f} mm,  유효깊이 d = {d_eff:.0f} mm")
+        print(f"포물선 합력 = {alpha * 0.85 * fck * B * c / 1e3:,.0f} kN"
+              f"   (작용 위치 βc = {beta * c:.1f} mm)")
+        print(f"블록  합력 = {f_blk * B * a / 1e3:,.0f} kN"
+              f"   (작용 위치 a/2 = {a / 2:.1f} mm)")
         """),
 
         md(r"""
@@ -608,7 +694,7 @@ def nb_l2_phi():
         | 압축지배변형률한계 $\varepsilon_y$ | KDS 14 20 20 4.1.2(3) |
         | 인장지배변형률한계 $\varepsilon_{t,tl}$ | KDS 14 20 20 4.1.2(4) |
         | 최대 설계 축강도 $\alpha\phi P_o$ | KDS 14 20 20 식 (4.1-16), (4.1-17) |
-        """ + EXPLORER_NOTE),
+        """, EXPLORER_NOTE),
 
         md("""
         ## 0. 준비
@@ -1037,7 +1123,7 @@ def nb_l3_params():
         | 최소 휨철근량 $\phi M_n \ge 1.2 M_{cr}$ | KDS 14 20 20 4.2.2 |
         | 파괴계수 $f_r = 0.63\lambda\sqrt{f_{ck}}$ | KDS 14 20 30 4.2.1 |
         | 처짐을 계산하지 않아도 되는 최소 두께 | KDS 14 20 30 표 4.2-1 |
-        """ + EXPLORER_NOTE),
+        """, EXPLORER_NOTE),
 
         md("""
         ## 0. 준비

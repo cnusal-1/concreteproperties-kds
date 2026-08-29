@@ -98,3 +98,36 @@ pygments_dark_style = "monokai"
 plot_rcparams = {"axes.unicode_minus": False}
 plot_html_show_source_link = False
 plot_html_show_formats = False
+
+
+# 사이드바에 절 제목까지 펼쳐 보이기
+#
+# furo 는 왼쪽 사이드바를 titles_only=True 로 만들어 문서 제목만 보여 준다.
+# 강의 노트북은 절(0. 준비, 1. …, 정리)까지 왼쪽 메뉴에서 펼쳐 볼 수 있어야
+# 하므로, furo 가 만든 트리를 titles_only 를 끈 것으로 바꿔 넣는다. furo 의
+# html-page-context 처리기보다 나중에 돌아야 하므로 우선순위를 뒤로 준다.
+def _sidebar_with_sections(app, pagename, templatename, context, doctree):
+    """사이드바 트리를 절 제목까지 포함한 것으로 교체한다."""
+    from furo.navigation import get_navigation_tree
+
+    toctree = context.get("toctree")
+    if toctree is None:
+        return
+
+    context["furo_navigation_tree"] = get_navigation_tree(
+        toctree(collapse=False, titles_only=False, maxdepth=-1, includehidden=True)
+    )
+
+
+def setup(app):
+    """Sphinx 확장 지점.
+
+    Args:
+        app: Sphinx 응용 객체
+
+    Returns:
+        확장 메타데이터
+    """
+    app.connect("html-page-context", _sidebar_with_sections, priority=900)
+
+    return {"parallel_read_safe": True, "parallel_write_safe": True}

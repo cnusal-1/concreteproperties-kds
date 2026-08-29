@@ -20,16 +20,23 @@ ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES = ROOT / "docs" / "examples"
 
 
-def md(text: str) -> nbformat.NotebookNode:
+def md(*parts: str) -> nbformat.NotebookNode:
     """마크다운 셀을 만든다.
 
+    조각을 여러 개 받아 **각각 따로** dedent 한 뒤 이어 붙인다. 들여쓰기가
+    다른 문자열을 미리 이어 붙이면 :func:`textwrap.dedent` 가 공통 들여쓰기를
+    찾지 못해 아무것도 벗겨내지 못하고, 마크다운 전체가 코드블록이 되어
+    버리기 때문이다.
+
     Args:
-        text: 셀 내용
+        *parts: 셀 내용 조각
 
     Returns:
         마크다운 셀
     """
-    return nbformat.v4.new_markdown_cell(dedent(text).strip("\n"))
+    body = "\n\n".join(dedent(part).strip("\n") for part in parts)
+
+    return nbformat.v4.new_markdown_cell(body)
 
 
 def code(text: str) -> nbformat.NotebookNode:

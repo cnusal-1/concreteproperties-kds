@@ -64,9 +64,9 @@ python scripts/build_explorer.py         # 탐색기 페이지 조립
 
 ```{toctree}
 :hidden:
-:maxdepth: 1
+:maxdepth: 2
 
-lectures/L1_등가응력블록
-lectures/L2_강도감소계수
-lectures/L3_설계파라미터
+L1. 등가직사각형 응력블록 <lectures/L1_등가응력블록>
+L2. 강도감소계수 φ <lectures/L2_강도감소계수>
+L3. 설계 파라미터 <lectures/L3_설계파라미터>
 ```
