@@ -327,3 +327,53 @@ def test_self_weight_uses_concrete_density():
     )
 
     assert result.stresses["긴장 직후"][1] == pytest.approx(expected)
+
+
+def test_transfer_stress_check_is_present():
+    """도입 직후 응력 검토가 실제로 수행된다."""
+    result = design_girder(
+        section=EXAMPLE_SECTIONS["PSC-I 2.0m"], span=30.0, a_p=25 * STRAND
+    )
+
+    assert "도입 직후 응력" in result.checks
+    assert result.checks["도입 직후 응력"]
+
+
+def test_literal_reading_of_1_5_9_fails_typical_girders():
+    """식 (1.5-9) 을 원문대로 읽으면 통상적인 거더가 이 검토에서 걸린다.
+
+    기본값을 EN 해석으로 둔 것은 해석상의 선택이며, 그 선택이 결과를
+    바꾼다는 사실 자체를 시험으로 남긴다.
+    """
+    kwargs = {
+        "section": EXAMPLE_SECTIONS["PSC-I 2.0m"],
+        "span": 30.0,
+        "a_p": 25 * STRAND,
+    }
+
+    assert design_girder(**kwargs).adequate
+
+    literal = design_girder(**kwargs, transfer_reading="원문")
+
+    assert not literal.checks["도입 직후 응력"]
+    # 다른 검토는 모두 그대로다 — 이 한 항목만 달라진다
+    differing = [
+        k for k, v in literal.checks.items() if v != design_girder(**kwargs).checks[k]
+    ]
+    assert differing == ["도입 직후 응력"]
+
+
+def test_long_span_satisfies_even_the_literal_reading():
+    """손실이 큰 긴 지간은 원문 해석으로도 만족한다.
+
+    즉시손실이 17 % 를 넘어서기 때문이다.
+    """
+    result = design_girder(
+        section=EXAMPLE_SECTIONS["PSC-I 2.7m"],
+        span=50.0,
+        a_p=61 * STRAND,
+        transfer_reading="원문",
+    )
+
+    assert result.losses.immediate_ratio > 0.167
+    assert result.checks["도입 직후 응력"]

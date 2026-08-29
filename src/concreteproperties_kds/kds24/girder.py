@@ -48,6 +48,7 @@ from .psc import (
     long_term_loss,
     max_jacking_stress,
     relaxation_loss,
+    stress_after_transfer,
 )
 from .serviceability import concrete_stress_limit, tendon_stress_limit
 
@@ -373,6 +374,7 @@ def design_girder(
     eps_shrinkage: float = 300.0e-6,
     w_sdl: float = 3.0,
     distribution_factor: float = 0.6,
+    transfer_reading: str = "EN",
     phi_c: float = PHI_C_ULS,
     phi_s: float = PHI_S_ULS,
 ) -> GirderCheck:
@@ -416,6 +418,11 @@ def design_girder(
         eps_shrinkage: 건조수축 변형률. 기본값 ``300e-6``.
         w_sdl: 2차 고정하중 (kN/m). 기본값 ``3.0``.
         distribution_factor: 활하중의 거더 분배계수. 기본값 ``0.6``.
+        transfer_reading: 식 (1.5-9) 을 읽는 방식. ``"EN"`` (기본값) 또는
+            ``"원문"``. :func:`~.psc.stress_after_transfer` 의 경고를 볼 것 —
+            원문 그대로 읽으면 한계가 1,200 MPa 로 내려가 통상적인 포스트텐션
+            거더가 만족하지 못한다. 기본값을 ``"EN"`` 으로 둔 것은 **해석상의
+            선택**이며, 실무에서는 발주자·감리와 맞추어야 한다.
         phi_c: 콘크리트 재료계수. 기본값 ``0.65``.
         phi_s: 강재 재료계수. 기본값 ``0.90``.
 
@@ -606,6 +613,8 @@ def design_girder(
         "사용 압축": max(top_service, bot_service) <= limits["사용"][0],
         "사용 비균열": min(top_service, bot_service) >= limits["사용"][1],
         "바닥판 압축": f_deck_top <= limits["바닥판 상연"][0],
+        "도입 직후 응력": f_pi
+        <= stress_after_transfer(fpy=fpy, fpu=fpu, reading=transfer_reading),
         "긴장재 응력": f_pe <= tendon_stress_limit(fpu=fpu),
         "설계휨강도": m_rd >= m_ed,
         "형고/지간": section.height / (span * 1000.0) >= 1 / 25.0,

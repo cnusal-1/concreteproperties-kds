@@ -271,3 +271,43 @@ def test_prestress_losses_ratios_are_consistent():
     assert losses.f_pi - losses.long_term == pytest.approx(losses.f_pe)
     assert losses.immediate_ratio < losses.total_ratio
     assert losses.total_ratio == pytest.approx(0.1736, abs=1e-4)
+
+
+def test_stress_after_transfer_two_readings():
+    """식 (1.5-9) 은 두 가지로 읽히고, 값이 크게 다르다.
+
+    원문은 두 계수를 모두 f_py 에 곱하지만, 앞의 식 (1.5-7) 과 대응하는
+    EN 1992-1-1 5.10.3(2) 는 인장강도와 항복강도를 짝짓는다.
+    """
+    literal = stress_after_transfer(fpy=FPY)
+    en = stress_after_transfer(fpy=FPY, fpu=FPU, reading="EN")
+
+    assert literal == pytest.approx(0.75 * FPY)  # 1200
+    assert en == pytest.approx(min(0.75 * FPU, 0.85 * FPY))  # 1360
+    assert literal < en
+
+
+def test_literal_reading_conflicts_with_jacking_limit():
+    """원문대로 읽으면 식 (1.5-9) 가 식 (1.5-7) 의 상한을 끌어내린다.
+
+    긴장응력 1,440 MPa 에서 1,200 MPa 로 내려오려면 즉시손실이 16.7 % 를
+    넘어야 하는데, 통상적인 포스트텐션 거더는 12 ~ 15 % 다.
+    """
+    f_jack = max_jacking_stress(fpu=FPU, fpy=FPY)
+    literal = stress_after_transfer(fpy=FPY)
+
+    required_loss = 1.0 - literal / f_jack
+
+    assert required_loss == pytest.approx(0.1667, abs=1e-3)
+    # EN 해석이면 훨씬 느슨하다
+    en = stress_after_transfer(fpy=FPY, fpu=FPU, reading="EN")
+    assert 1.0 - en / f_jack == pytest.approx(0.0556, abs=1e-3)
+
+
+def test_stress_after_transfer_rejects_bad_reading():
+    """읽는 방식은 두 가지뿐이고, EN 해석에는 f_pu 가 필요하다."""
+    with pytest.raises(ValueError, match="reading"):
+        stress_after_transfer(fpy=FPY, reading="아무거나")
+
+    with pytest.raises(ValueError, match="fpu"):
+        stress_after_transfer(fpy=FPY, reading="EN")

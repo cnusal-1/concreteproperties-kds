@@ -109,28 +109,60 @@ def max_jacking_stress(fpu: float, fpy: float, overtension: bool = False) -> flo
     return min(JACKING_RATIO_FPU * fpu, JACKING_RATIO_FPY * fpy)
 
 
-def stress_after_transfer(fpy: float) -> float:
-    r"""프리스트레스 도입 직후의 긴장재 응력 :math:`f_{pmo}` 를 반환한다.
+def stress_after_transfer(
+    fpy: float, fpu: float | None = None, reading: str = "원문"
+) -> float:
+    r"""프리스트레스 도입 직후의 긴장재 응력 한계 :math:`f_{pmo}` 를 반환한다.
 
     **KDS 24 14 21 1.5.7.3(1) 식 (1.5-9)**
 
     .. math::
         f_{pmo} = \min \left( 0.75 f_{py},\ 0.85 f_{py} \right) = 0.75 f_{py}
 
-    .. note::
-        원문은 두 계수를 **모두** :math:`f_{py}` 에 곱하도록 적고 있어, 작은 쪽인
-        :math:`0.75 f_{py}` 가 언제나 이긴다. 바로 앞 식 (1.5-7) 이
-        :math:`\min(0.8 f_{pu},\ 0.9 f_{py})` 처럼 인장강도와 항복강도를 짝지어
-        쓰는 것과 형태가 다르므로, 실무에서는 발주자·감리와 해석을 맞추기를
-        권한다. 이 함수는 **원문 그대로** 구현한다.
+    .. warning::
+        **이 조문은 두 가지로 읽힌다.**
+
+        원문(``reading="원문"``)은 두 계수를 **모두** :math:`f_{py}` 에 곱하도록
+        적고 있어 작은 쪽인 :math:`0.75 f_{py}` 가 언제나 이긴다. 그런데 바로 앞
+        식 (1.5-7) 은 :math:`\min(0.8 f_{pu},\ 0.9 f_{py})` 로 인장강도와
+        항복강도를 짝지어 쓴다. 대응하는 EN 1992-1-1 5.10.3(2) 도
+        :math:`\min(0.75 f_{pk},\ 0.85 f_{p0.1k})` 로 둘을 짝짓는다
+        (``reading="EN"``).
+
+        차이가 작지 않다. :math:`f_{pu}` 1,860 / :math:`f_{py}` 1,600 강연선이면
+        원문은 1,200 MPa, EN 해석은 1,360 MPa 다. 게다가 원문대로 읽으면 식
+        (1.5-7) 이 허용하는 긴장응력 1,440 MPa 에서 **즉시손실이 16.7 % 를 넘어야**
+        만족할 수 있는데, 통상적인 포스트텐션 거더의 즉시손실은 12 ~ 15 % 다.
+        즉 원문 그대로면 식 (1.5-9) 가 식 (1.5-7) 의 상한을 사실상 1,378 MPa 로
+        끌어내린다.
+
+        어느 쪽으로 읽을지는 **설계자가 발주자·감리와 맞추어야 한다.** 이 함수는
+        기본값으로 **원문 그대로** 계산한다.
 
     Args:
         fpy: 긴장재의 기준항복강도 (MPa)
+        fpu: 긴장재의 기준인장강도 (MPa). ``reading="EN"`` 일 때만 쓴다.
+        reading: ``"원문"`` (기본값) 또는 ``"EN"``.
+
+    Raises:
+        ValueError: ``reading`` 이 두 값 중 하나가 아니거나, ``"EN"`` 인데
+            ``fpu`` 가 없는 경우
 
     Returns:
-        도입 직후의 긴장재 응력 (MPa)
+        도입 직후 긴장재 응력의 한계 (MPa)
     """
-    return min(TRANSFER_RATIO_LOW * fpy, TRANSFER_RATIO_HIGH * fpy)
+    if reading == "원문":
+        return min(TRANSFER_RATIO_LOW * fpy, TRANSFER_RATIO_HIGH * fpy)
+
+    if reading != "EN":
+        msg = f"reading 은 '원문' 또는 'EN' 이어야 한다: {reading}"
+        raise ValueError(msg)
+
+    if fpu is None:
+        msg = "reading='EN' 이면 fpu 가 필요하다"
+        raise ValueError(msg)
+
+    return min(TRANSFER_RATIO_LOW * fpu, TRANSFER_RATIO_HIGH * fpy)
 
 
 def concrete_stress_limit_at_transfer(fck_t: float, pretension: bool = False) -> float:

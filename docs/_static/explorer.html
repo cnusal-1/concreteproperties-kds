@@ -304,6 +304,7 @@
     <button role="tab" id="tab-col" aria-selected="false" aria-controls="panel-col">L2 · 강도감소계수 φ</button>
     <button role="tab" id="tab-beam" aria-selected="false" aria-controls="panel-beam">L3 · 설계 파라미터</button>
     <button role="tab" id="tab-deck" aria-selected="false" aria-controls="panel-deck">L4 · 바닥판 설계</button>
+    <button role="tab" id="tab-girder" aria-selected="false" aria-controls="panel-girder">L5 · PSC 거더</button>
   </div>
 </header>
 
@@ -623,6 +624,85 @@
     </div>
   </section>
 
+  <section id="panel-girder" role="tabpanel" aria-labelledby="tab-girder" class="hidden">
+    <div class="layout">
+      <div class="rail">
+        <h2>PSC 거더 조건</h2>
+        <p class="sub" style="margin:2px 0 0;font-size:12.5px">
+          거더 간격 2.5 m, 바닥판 240 mm, 15.2 mm 강연선(f<sub>pu</sub> 1860,
+          f<sub>py</sub> 1600), 포스트텐션.
+          <b>단면은 예시이며 표준도가 아니다.</b>
+        </p>
+
+        <div class="control">
+          <div class="control-head"><label for="g-sec">거더 단면</label><output id="g-sec-out"></output></div>
+          <input type="range" id="g-sec" min="0" max="4" step="1" value="2">
+          <div class="ticks"><span>1.4 m</span><span>2.7 m</span></div>
+        </div>
+
+        <div class="control">
+          <div class="control-head"><label for="g-span">지간</label><output id="g-span-out"></output></div>
+          <input type="range" id="g-span" min="15" max="55" step="1" value="30">
+          <div class="ticks"><span>15 m</span><span>55 m</span></div>
+        </div>
+
+        <div class="control">
+          <div class="control-head"><label for="g-n">강연선 가닥 수</label><output id="g-n-out"></output></div>
+          <input type="range" id="g-n" min="8" max="90" step="1" value="25">
+          <div class="ticks"><span>8가닥</span><span>90가닥</span></div>
+        </div>
+
+        <div class="control">
+          <div class="control-head"><label for="g-fck">거더 f<sub>ck</sub></label><output id="g-fck-out"></output></div>
+          <input type="range" id="g-fck" min="30" max="50" step="5" value="40">
+          <div class="ticks"><span>30 MPa</span><span>50 MPa</span></div>
+        </div>
+
+        <div class="control">
+          <div class="control-head"><label for="g-e">텐던 편심 e</label><output id="g-e-out"></output></div>
+          <input type="range" id="g-e" min="0" max="100" step="1" value="100">
+          <div class="ticks"><span>도심</span><span>기하 한계</span></div>
+        </div>
+
+        <p class="sub" style="margin-top:14px">
+          편심 슬라이더는 <b>기하 한계</b>(하부 연단에서 200 mm 위)를 100 으로 둔 비율이다.
+          단면 성질·손실·응력은 모두 닫힌 형태로 풀므로 격자 보간이 없다.
+        </p>
+      </div>
+
+      <div>
+        <div class="chips" id="g-chips"></div>
+        <div class="plots">
+          <div class="card">
+            <h3>합성 단면</h3>
+            <p class="cap">회색이 바닥판(탄성계수비로 환산한 폭), 파란 점이 긴장재 도심이다. 편심을 줄이면 점이 도심으로 올라온다.</p>
+            <svg id="g-sec-svg" viewBox="0 0 460 300" role="img" aria-label="PSC 거더 합성 단면"></svg>
+          </div>
+          <div class="card">
+            <h3>프리스트레스 손실</h3>
+            <p class="cap">긴장한 응력에서 무엇이 얼마나 빠지는지. 마찰은 지간이 길수록 커진다.</p>
+            <svg id="g-loss" viewBox="0 0 460 300" role="img" aria-label="프리스트레스 손실 폭포"></svg>
+          </div>
+          <div class="card wide">
+            <h3>단면 응력 — 긴장 직후와 사용 시</h3>
+            <p class="cap">압축을 오른쪽(양수)으로 그렸다. 긴장 직후에는 하연이 눌리고, 사용 시에는 하중이 그것을 되돌린다. 붉은 선을 넘으면 불합격이다.</p>
+            <svg id="g-stress" viewBox="0 0 940 300" role="img" aria-label="긴장 직후와 사용 시 단면 응력"></svg>
+          </div>
+          <div class="card wide">
+            <h3>지간을 늘리면 무엇이 가닥 수를 정하는가</h3>
+            <p class="cap">지간마다 각 한계상태를 홀로 만족시키는 데 필요한 최소 강연선 수량이다. 위에 있는 곡선이 설계를 지배한다 — 짧은 지간은 극한이, 긴 지간은 사용한계상태가 정한다. 점은 지금 배치한 수량이다.</p>
+            <svg id="g-sweep" viewBox="0 0 940 320" role="img" aria-label="지간에 따른 지배 한계상태"></svg>
+          </div>
+          <div class="card wide">
+            <h3>검토 결과</h3>
+            <p class="cap">KDS 24 14 21 1.5.7(도입응력·손실), 4.1.1(극한 휨), 4.2.2(사용 응력).</p>
+            <div class="chips" id="g-checks" style="margin-bottom:4px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
 
   <footer>
     브라우저에서 파이썬을 돌릴 수 없으므로, 매개변수 격자 위의 해석 결과를 미리 계산해
@@ -791,8 +871,9 @@ function stateChip(k, cls) {
 
 /* ── 탭 ──────────────────────────────────────────────────── */
 const PANELS = { "tab-block": "panel-block", "tab-col": "panel-col",
-                 "tab-beam": "panel-beam", "tab-deck": "panel-deck" };
-const redrawAll = () => { drawBlock(); drawColumn(); drawBeam(); drawDeck(); };
+                 "tab-beam": "panel-beam", "tab-deck": "panel-deck",
+                 "tab-girder": "panel-girder" };
+const redrawAll = () => { drawBlock(); drawColumn(); drawBeam(); drawDeck(); drawGirder(); };
 
 document.querySelectorAll('[role="tab"]').forEach(btn => {
   btn.addEventListener("click", () => {
@@ -1671,6 +1752,497 @@ cFck.set(27); cFy.set(400); cFck.sync(); cFy.sync();
 bFck.set(27); bFy.set(400); bN.set(4); bD.set(600);
 bFck.sync(); bFy.sync(); bN.sync(); bD.sync();
 dSpan.sync(); dT.sync(); dDia.sync(); dSp.sync(); dExp.sync(); dPav.sync();
+
+/* ── 탭 5 · PSC 거더 (L5) ────────────────────────────────── */
+/* KDS 24 14 21 1.5.7(도입응력·손실), 3.3(릴랙세이션), 4.1.1(극한 휨),
+   4.2.2(사용 응력), KDS 24 12 21 4.3(KL-510).
+   파이썬 concreteproperties_kds.kds24.girder.design_girder 와 같은 식이다. */
+const GIRDER = {
+  strand: 138.7,          // 15.2 mm 7연선 1가닥 (mm²)
+  fpu: 1860, fpy: 1600, Ep: 200000,
+  cover: 200,             // 하연에서 긴장재 도심까지 (mm)
+  spacing: 2500, deckT: 240, haunch: 50, fckDeck: 27, fckTransfer: 30,
+  gamma: 24.5,            // 콘크리트 단위중량 (kN/m³)
+  wSdl: 3.0, df: 0.6,     // 2차 고정하중 (kN/m), 거더 분배계수
+  phiC: 0.65, phiS: 0.90,
+  mu: 0.19, k: 0.004, theta: 0.12, slip: 6.0, nTendon: 4,
+  phiCreep: 2.0, epsSh: 300e-6,
+  relaxC: 0.66, relaxA: 9.1, rho1000: 2.5,   // 저릴랙세이션 (2종)
+  axleP: [48, 192, 135, 135], axleX: [0, 3.6, 10.8, 12.0],
+  sections: [
+    { name: "PSC-I 1.4m", h: 1400, tw: 700, bw: 800 },
+    { name: "PSC-I 1.7m", h: 1700, tw: 750, bw: 850 },
+    { name: "PSC-I 2.0m", h: 2000, tw: 800, bw: 900 },
+    { name: "PSC-I 2.3m", h: 2300, tw: 850, bw: 1000 },
+    { name: "PSC-I 2.7m", h: 2700, tw: 900, bw: 1100 },
+  ],
+  topT: 180, topTaper: 150, web: 290, botT: 200, botTaper: 160,
+};
+
+/** 평균압축강도와의 차 — 식 (3.1-1) */
+function gDfc(fck) { return fck <= 40 ? 4 : (fck >= 60 ? 6 : 4 + (fck - 40) * 0.1); }
+
+/** 탄성계수 E_c = 0.077 m_c^1.5 * cbrt(f_cm) (3.1.2.2) */
+function gEc(fck) { return 0.077 * Math.pow(2300, 1.5) * Math.cbrt(fck + gDfc(fck)); }
+
+/** 인장강도 f_ctk = 0.70 * 0.30 * f_cm^(2/3) */
+function gFctk(fck) { return 0.21 * Math.pow(fck + gDfc(fck), 2 / 3); }
+
+/** 포물선-직선을 수치적분한 등가블록 계수 (f_ck 40 이하는 일정) */
+function gBlock(fck) {
+  const grid = [40, 45, 50, 60], al = [0.797980, 0.789744, 0.775517, 0.731915],
+        be = [0.411776, 0.408866, 0.403686, 0.390934];
+  if (fck <= 40) return { alpha: al[0], beta: be[0] };
+  for (let i = 0; i < grid.length - 1; i++) {
+    if (fck <= grid[i + 1]) {
+      const t = (fck - grid[i]) / (grid[i + 1] - grid[i]);
+      return { alpha: al[i] + t * (al[i + 1] - al[i]), beta: be[i] + t * (be[i + 1] - be[i]) };
+    }
+  }
+  return { alpha: al[3], beta: be[3] };
+}
+
+/** 폭이 선형으로 변하는 한 구간의 (면적, 밑면 기준 1차·2차 모멘트) */
+function segProps(y0, h, b0, b1) {
+  if (h <= 0) return [0, 0, 0];
+  const db = b1 - b0;
+  return [h * (b0 + b1) / 2,
+          b0 * (y0 * h + h * h / 2) + db * (y0 * h / 2 + h * h / 3),
+          b0 * (y0 * y0 * h + y0 * h * h + h * h * h / 3)
+            + db * (y0 * y0 * h / 2 + 2 * y0 * h * h / 3 + h * h * h / 4)];
+}
+
+/** 거더 단면을 아래에서 위로 훑는 구간 [y0, 높이, 아래폭, 위폭] 목록 */
+function gSegments(sec) {
+  const G = GIRDER;
+  const webH = sec.h - G.botT - G.botTaper - G.topTaper - G.topT;
+  const rows = [[G.botT, sec.bw, sec.bw], [G.botTaper, sec.bw, G.web],
+                [webH, G.web, G.web], [G.topTaper, G.web, sec.tw],
+                [G.topT, sec.tw, sec.tw]];
+  const out = []; let y = 0;
+  for (const [h, b0, b1] of rows) { out.push([y, h, b0, b1]); y += h; }
+  return out;
+}
+
+function gProps(sec) {
+  let area = 0, first = 0, second = 0;
+  for (const [y0, h, b0, b1] of gSegments(sec)) {
+    const [a, q, i] = segProps(y0, h, b0, b1);
+    area += a; first += q; second += i;
+  }
+  const yb = first / area, I = second - area * yb * yb;
+  return { area, yb, yt: sec.h - yb, I, h: sec.h, zb: I / yb, zt: I / (sec.h - yb) };
+}
+
+function gComposite(sec, g, n) {
+  const G = GIRDER, bEff = G.spacing * n;
+  const yDeck = sec.h + G.haunch + G.deckT / 2, aDeck = bEff * G.deckT;
+  const area = g.area + aDeck;
+  const yb = (g.area * g.yb + aDeck * yDeck) / area;
+  const I = g.I + g.area * Math.pow(yb - g.yb, 2)
+          + bEff * Math.pow(G.deckT, 3) / 12 + aDeck * Math.pow(yDeck - yb, 2);
+  const h = sec.h + G.haunch + G.deckT;
+  return { area, yb, yt: h - yb, I, h, zb: I / yb, zt: I / (h - yb), bEff };
+}
+
+/** KL-510 표준트럭이 단순 지지 지간에 만드는 최대 휨모멘트 (kN·m) */
+function truckMoment(L, step) {
+  const G = GIRDER;
+  step = step || 0.1;
+  let best = 0;
+  for (let front = -G.axleX[3]; front <= L + 1e-9; front += step) {
+    const pos = [], load = [];
+    for (let i = 0; i < 4; i++) {
+      const a = front + G.axleX[i];
+      if (a >= 0 && a <= L) { pos.push(a); load.push(G.axleP[i]); }
+    }
+    if (!pos.length) continue;
+    let sum = 0;
+    for (let i = 0; i < pos.length; i++) sum += load[i] * (L - pos[i]);
+    const Ra = sum / L;
+    for (const x of pos) {
+      let m = Ra * x;
+      for (let i = 0; i < pos.length; i++) if (pos[i] < x) m -= load[i] * (x - pos[i]);
+      if (m > best) best = m;
+    }
+  }
+  return best;
+}
+
+/** 표준차로하중 (kN/m) — 식 (4.3-1) */
+function laneLoad(L) { return L <= 60 ? 12.7 : 12.7 * Math.pow(60 / L, 0.10); }
+
+/**
+ * 한 개 차로의 활하중 휨모멘트 (kN·m).
+ * 트럭 단독과 "트럭 75 % + 차로" 중 큰 값을 쓴다 (KDS 24 12 21 4.3.2).
+ */
+const _liveMemo = new Map();
+function gLiveMoment(L) {
+  if (_liveMemo.has(L)) return _liveMemo.get(L);
+  const im = 1.25;                       // 충격 25 % (표 4.4-1, 극한)
+  const mt = truckMoment(L), ml = laneLoad(L) * L * L / 8;
+  const v = Math.max(im * mt, 0.75 * im * mt + ml);
+  _liveMemo.set(L, v);
+  return v;
+}
+
+function girderSolve(o) {
+  const G = GIRDER, sec = o.sec, span = o.span, ap = o.n * G.strand, fck = o.fck;
+  const g = gProps(sec);
+  const comp = gComposite(sec, g, gEc(G.fckDeck) / gEc(fck));
+  const eMax = g.yb - G.cover, e = eMax * o.eRatio;
+  const dp = comp.h - (g.yb - e);
+
+  /* 하중 (kN·m) */
+  const mG = G.gamma * g.area / 1e6 * span * span / 8;
+  const mD = G.gamma * (G.spacing / 1000) * (G.deckT / 1000) * span * span / 8;
+  const mS = G.wSdl * span * span / 8;
+  const mL = gLiveMoment(span) * G.df;
+
+  /* 손실 */
+  const fJack = Math.min(0.80 * G.fpu, 0.90 * G.fpy);
+  const dFric = fJack * (1 - Math.exp(-(G.mu * G.theta + G.k * span / 2)));
+  const dAnch = G.slip / (span * 1000) * G.Ep;
+  const fAfter = fJack - dFric - dAnch, pAfter = fAfter * ap;
+  const jFac = (G.nTendon - 1) / (2 * G.nTendon);
+  const dElastic = jFac * G.Ep / gEc(G.fckTransfer)
+                 * (pAfter / g.area + pAfter * e * e / g.I);
+  const fPi = fAfter - dElastic, pI = fPi * ap;
+
+  const mu = fPi / G.fpu;
+  const dRelax = G.relaxC * G.rho1000 * Math.exp(G.relaxA * mu)
+               * Math.pow(500, 0.75 * (1 - mu)) * 1e-5 * fPi;
+  const alphaE = G.Ep / gEc(fck);
+  const num = G.epsSh * G.Ep + 0.8 * dRelax + alphaE * G.phiCreep
+            * (-(mG + mD + mS) * 1e6 * e / g.I + pI / g.area + pI * e * e / g.I);
+  const den = 1 + alphaE * ap / g.area * (1 + g.area / g.I * e * e)
+                * (1 + 0.8 * G.phiCreep);
+  const dLong = num / den;
+  const fPe = fPi - dLong, pE = fPe * ap;
+
+  /* 응력 (압축 +, MPa) */
+  const gStress = (p, m) => [p / g.area - p * e / g.zt + m * 1e6 / g.zt,
+                             p / g.area + p * e / g.zb - m * 1e6 / g.zb];
+  const tr = gStress(pI, mG);
+  const yGT = comp.yb - sec.h, ztGT = comp.I / Math.abs(yGT);
+  const service = mAfter => {
+    const [t, b] = gStress(pE, mG + mD);
+    return [t + mAfter * 1e6 / ztGT * (yGT < 0 ? 1 : -1), b - mAfter * 1e6 / comp.zb];
+  };
+  const su = service(mS), se = service(mS + mL);
+  const fDeck = (mS + mL) * 1e6 / comp.zt * (gEc(G.fckDeck) / gEc(fck));
+
+  /* 극한 휨강도 — 압축부가 바닥판을 넘으면 T형으로 푼다 */
+  const blk = gBlock(G.fckDeck), lam = 2 * blk.beta, eta = blk.alpha / lam;
+  const fcdDeck = G.phiC * 0.85 * G.fckDeck, fcdG = G.phiC * 0.85 * fck;
+  const T = ap * G.phiS * G.fpy;
+  // 극한 휨의 압축폭은 실제 바닥판 폭이다. 환산폭(comp.bEff)은 탄성 응력
+  // 계산용이므로 여기에 쓰면 안 된다.
+  const bUls = G.spacing;
+  const cFull = eta * fcdDeck * bUls * G.deckT;
+  let flanged, aBlock, mRd;
+  if (T <= cFull) {
+    flanged = false;
+    aBlock = T / (eta * fcdDeck * bUls);
+    mRd = T * (dp - aBlock / 2) / 1e6;
+  } else {
+    flanged = true;
+    const res = T - cFull, aWeb = res / (eta * fcdG * sec.tw);
+    aBlock = G.deckT + G.haunch + aWeb;
+    mRd = (cFull * (dp - G.deckT / 2)
+         + res * (dp - G.deckT - G.haunch - aWeb / 2)) / 1e6;
+  }
+  const mEd = 1.25 * (mG + mD + mS) + 1.80 * mL;      // 극한Ⅰ
+  const fctk = gFctk(fck);
+
+  return {
+    g, comp, e, eMax, dp, ap, mG, mD, mS, mL, mEd, mRd, flanged, cN: aBlock / lam,
+    fJack, dFric, dAnch, dElastic, dLong, fPi, fPe, pI, pE,
+    immediate: 1 - fPi / fJack, total: 1 - fPe / fJack,
+    stress: { tr, su, se, deck: fDeck },
+    lim: { tr: 0.60 * G.fckTransfer, su: 0.45 * fck, se: 0.60 * fck,
+           fctk, deck: 0.60 * G.fckDeck },
+    checks: {
+      "긴장 직후 압축": Math.max(tr[0], tr[1]) <= 0.60 * G.fckTransfer,
+      "긴장 직후 인장": Math.min(tr[0], tr[1]) >= -0.001,
+      "지속하중 압축": Math.max(su[0], su[1]) <= 0.45 * fck,
+      "지속하중 영응력": Math.min(su[0], su[1]) >= -0.001,
+      "사용 압축": Math.max(se[0], se[1]) <= 0.60 * fck,
+      "사용 비균열": Math.min(se[0], se[1]) >= -fctk,
+      "바닥판 압축": fDeck <= 0.60 * G.fckDeck,
+      "긴장재 응력": fPe <= 0.65 * G.fpu,
+      "설계휨강도": mRd >= mEd,
+      "형고/지간": sec.h / (span * 1000) >= 1 / 25,
+    },
+  };
+}
+
+const gSecR  = bindRange2("g-sec",  i => GIRDER.sections[i].name, () => drawGirder());
+const gSpanR = bindRange2("g-span", v => v.toFixed(0) + " m",     () => drawGirder());
+const gNR    = bindRange2("g-n",    v => v.toFixed(0) + "가닥 · " +
+                          (v * GIRDER.strand).toFixed(0) + " mm²", () => drawGirder());
+const gFckR  = bindRange2("g-fck",  v => v.toFixed(0) + " MPa",   () => drawGirder());
+const gER    = bindRange2("g-e",    v => v.toFixed(0) + " %",     () => drawGirder());
+
+function girderState() {
+  return { sec: GIRDER.sections[gSecR.get()], span: gSpanR.get(), n: gNR.get(),
+           fck: gFckR.get(), eRatio: gER.get() / 100 };
+}
+
+function drawGirder() {
+  const o = girderState(), r = girderSolve(o);
+
+  document.getElementById("g-chips").innerHTML =
+    chip("A 거더", (r.g.area / 1e6).toFixed(3), "m²") +
+    chip("I 합성", (r.comp.I / 1e12).toFixed(3), "m⁴") +
+    chip("편심 e", r.e.toFixed(0), "mm") +
+    chip("총손실", (r.total * 100).toFixed(1), "%") +
+    chip("P<sub>e</sub>", (r.pE / 1e3).toFixed(0), "kN") +
+    chip("M<sub>Ed</sub>", r.mEd.toFixed(0), "kN·m") +
+    chip("M<sub>Rd</sub>", r.mRd.toFixed(0), "kN·m") +
+    chip("하연 사용", r.stress.se[1].toFixed(2), "MPa");
+
+  document.getElementById("g-checks").innerHTML = Object.entries(r.checks)
+    .map(([k, ok]) => `<div class="chip state" data-cls="${ok ? "인장지배단면" : "압축지배단면"}">` +
+                      `<span class="k">${k}</span><span class="v">${ok ? "만족" : "불만족"}</span></div>`)
+    .join("");
+
+  drawGirderSection(o, r);
+  drawGirderLoss(o, r);
+  drawGirderStress(o, r);
+  drawGirderSweep(o, r);
+}
+
+function drawGirderSection(o, r) {
+  const svg = document.getElementById("g-sec-svg");
+  svg.innerHTML = "";
+  const G = GIRDER, W = 460, H = 300, m = { t: 18, b: 30 };
+  const ph = H - m.t - m.b, s = ph / 2990;     // 최대 전체높이 기준 고정 축척
+  const cx = W / 2, totalH = o.sec.h + G.haunch + G.deckT;
+  const yTop = m.t + (ph - totalH * s);
+  const ink = CSSVAR("--fg"), grey = CSSVAR("--muted"), steel = CSSVAR("--tens");
+
+  svg.appendChild(el("rect", { x: cx - G.spacing * s / 2, y: yTop,
+    width: G.spacing * s, height: G.deckT * s, fill: grey,
+    "fill-opacity": 0.12, stroke: grey, "stroke-width": 1 }));
+  svg.appendChild(el("rect", { x: cx - o.sec.tw * s / 2, y: yTop + G.deckT * s,
+    width: o.sec.tw * s, height: G.haunch * s, fill: grey, "fill-opacity": 0.2 }));
+
+  const yG = yTop + (G.deckT + G.haunch) * s;   // 거더 상연
+  const right = [], left = [];
+  for (const [yy, h, b0, b1] of gSegments(o.sec)) {
+    const yA = yG + (o.sec.h - yy) * s, yB = yG + (o.sec.h - yy - h) * s;
+    right.push([cx + b0 * s / 2, yA], [cx + b1 * s / 2, yB]);
+    left.push([cx - b0 * s / 2, yA], [cx - b1 * s / 2, yB]);
+  }
+  svg.appendChild(el("polygon", {
+    points: right.concat(left.reverse()).map(p => p.map(v => v.toFixed(1)).join(",")).join(" "),
+    fill: ink, "fill-opacity": 0.10, stroke: ink, "stroke-width": 1.4 }));
+
+  const yCent = yG + (o.sec.h - r.g.yb) * s;
+  svg.appendChild(el("line", { x1: cx - o.sec.bw * s / 2 - 14, y1: yCent,
+    x2: cx + o.sec.bw * s / 2 + 14, y2: yCent, stroke: grey,
+    "stroke-width": 1, "stroke-dasharray": "5 3" }));
+  svg.appendChild(el("text", { x: cx + o.sec.bw * s / 2 + 17, y: yCent + 3,
+    "font-size": 9.5, fill: grey }, "거더 도심"));
+
+  const yT = yG + (o.sec.h - (r.g.yb - r.e)) * s;
+  svg.appendChild(el("line", { x1: cx, y1: yCent, x2: cx, y2: yT,
+    stroke: steel, "stroke-width": 1.6 }));
+  svg.appendChild(el("circle", { cx, cy: yT, r: 5, fill: steel }));
+  svg.appendChild(el("text", { x: cx + 10, y: (yCent + yT) / 2 + 3,
+    "font-size": 9.5, fill: steel }, `e = ${r.e.toFixed(0)} mm`));
+
+  svg.appendChild(el("text", { x: 14, y: H - 8, "font-size": 10, fill: grey },
+    `${o.sec.name} · A = ${(r.g.area / 1e6).toFixed(3)} m² · y_b = ${r.g.yb.toFixed(0)} mm`));
+}
+
+function drawGirderLoss(o, r) {
+  const svg = document.getElementById("g-loss");
+  svg.innerHTML = "";
+  const W = 460, H = 300, m = { l: 50, r: 14, t: 24, b: 46 };
+  const pw = W - m.l - m.r, ph = H - m.t - m.b;
+  const grey = CSSVAR("--muted"), ink = CSSVAR("--fg");
+  const red = CSSVAR("--comp"), blue = CSSVAR("--tens");
+  const top = r.fJack * 1.16;
+  const Y = v => m.t + ph - v / top * ph;
+  const X = i => m.l + (i + 0.5) / 6 * pw;
+
+  svg.appendChild(el("line", { x1: m.l, y1: m.t + ph, x2: m.l + pw, y2: m.t + ph, stroke: grey }));
+  svg.appendChild(el("line", { x1: m.l, y1: m.t, x2: m.l, y2: m.t + ph, stroke: grey }));
+  for (let i = 0; i <= 4; i++) {
+    const v = top * i / 4;
+    svg.appendChild(el("line", { x1: m.l, y1: Y(v), x2: m.l + pw, y2: Y(v),
+      stroke: grey, opacity: 0.2 }));
+    svg.appendChild(el("text", { x: m.l - 6, y: Y(v) + 4, "text-anchor": "end",
+      fill: grey, "font-size": 10 }, v.toFixed(0)));
+  }
+
+  const bw = pw / 6 * 0.6;
+  const bar = (i, hiV, loV, colour, label) => {
+    const yA = Y(hiV), yB = Y(loV);
+    svg.appendChild(el("rect", { x: X(i) - bw / 2, y: yA, width: bw,
+      height: Math.max(yB - yA, 1.5), fill: colour, "fill-opacity": 0.85 }));
+    svg.appendChild(el("text", { x: X(i), y: yA - 5, "font-size": 9,
+      "text-anchor": "middle", fill: colour }, label));
+  };
+
+  let lv = r.fJack;
+  bar(0, lv, 0, grey, lv.toFixed(0));
+  [r.dFric, r.dAnch, r.dElastic, r.dLong].forEach((d, i) => {
+    bar(i + 1, lv, lv - d, red, "-" + d.toFixed(0));
+    lv -= d;
+  });
+  bar(5, lv, 0, blue, lv.toFixed(0));
+
+  ["긴장", "마찰", "정착", "탄성", "장기", "유효"].forEach((n, i) => {
+    svg.appendChild(el("text", { x: X(i), y: m.t + ph + 17, "font-size": 10,
+      "text-anchor": "middle", fill: ink }, n));
+  });
+  svg.appendChild(el("text", { x: W / 2, y: H - 10, "font-size": 10,
+    "text-anchor": "middle", fill: grey },
+    `총손실 ${(r.total * 100).toFixed(1)} % (즉시 ${(r.immediate * 100).toFixed(1)} %)`));
+}
+
+function drawGirderStress(o, r) {
+  const svg = document.getElementById("g-stress");
+  svg.innerHTML = "";
+  const W = 940, H = 300;
+  const ink = CSSVAR("--fg"), grey = CSSVAR("--muted");
+  const red = CSSVAR("--comp"), blue = CSSVAR("--tens");
+
+  const all = [r.stress.tr[0], r.stress.tr[1], r.stress.se[0], r.stress.se[1],
+               r.lim.tr, r.lim.se, -r.lim.fctk, 0];
+  const lo = Math.min(...all) - 2, hi = Math.max(...all) + 2;
+
+  const cases = [
+    { t: "긴장 직후 — 거더 단면, P_i + 거더 자중", s: r.stress.tr, x0: 118,
+      hi: r.lim.tr, lo: 0, hiL: `0.6 f_ck(t) = ${r.lim.tr.toFixed(1)}`, loL: "영응력" },
+    { t: "사용 시 — 합성 단면, P_e + 전 하중", s: r.stress.se, x0: 578,
+      hi: r.lim.se, lo: -r.lim.fctk, hiL: `0.6 f_ck = ${r.lim.se.toFixed(1)}`,
+      loL: `-f_ctk = ${(-r.lim.fctk).toFixed(2)}` },
+  ];
+
+  for (const c of cases) {
+    const pw = 300, yTop = 64, ph = 176;
+    const X = v => c.x0 + pw * (v - lo) / (hi - lo);
+    const zero = X(0);
+
+    svg.appendChild(el("text", { x: c.x0 - 60, y: 28, "font-size": 11.5,
+      "font-weight": 600, fill: ink }, c.t));
+
+    svg.appendChild(el("rect", { x: c.x0 - 60, y: yTop, width: 24, height: ph,
+      fill: ink, "fill-opacity": 0.08, stroke: ink, "stroke-width": 1 }));
+    svg.appendChild(el("text", { x: c.x0 - 64, y: yTop + 5, "font-size": 9,
+      "text-anchor": "end", fill: grey }, "상연"));
+    svg.appendChild(el("text", { x: c.x0 - 64, y: yTop + ph + 5, "font-size": 9,
+      "text-anchor": "end", fill: grey }, "하연"));
+
+    const [st, sb] = c.s;
+    svg.appendChild(el("polygon", {
+      points: [[zero, yTop], [X(st), yTop], [X(sb), yTop + ph], [zero, yTop + ph]]
+        .map(p => p.map(v => v.toFixed(1)).join(",")).join(" "),
+      fill: blue, "fill-opacity": 0.16, stroke: blue, "stroke-width": 1.8 }));
+    svg.appendChild(el("line", { x1: zero, y1: yTop - 10, x2: zero, y2: yTop + ph + 10,
+      stroke: grey, "stroke-width": 1 }));
+
+    for (const [v, label] of [[c.hi, c.hiL], [c.lo, c.loL]]) {
+      svg.appendChild(el("line", { x1: X(v), y1: yTop - 10, x2: X(v), y2: yTop + ph + 10,
+        stroke: red, "stroke-width": 1.5, "stroke-dasharray": "5 3" }));
+      svg.appendChild(el("text", { x: X(v), y: yTop - 15, "font-size": 9,
+        "text-anchor": "middle", fill: red }, label));
+    }
+
+    for (const [v, y] of [[st, yTop + 13], [sb, yTop + ph - 5]]) {
+      svg.appendChild(el("text", { x: X(v) + (v >= 0 ? 6 : -6), y, "font-size": 10,
+        "text-anchor": v >= 0 ? "start" : "end", fill: ink }, v.toFixed(2)));
+    }
+    svg.appendChild(el("text", { x: c.x0 + pw / 2, y: yTop + ph + 34, "font-size": 9.5,
+      "text-anchor": "middle", fill: grey }, "압축이 오른쪽 (MPa)"));
+  }
+}
+
+function drawGirderSweep(o, r) {
+  const svg = document.getElementById("g-sweep");
+  svg.innerHTML = "";
+  const W = 940, H = 320, m = { l: 62, r: 150, t: 26, b: 50 };
+  const pw = W - m.l - m.r, ph = H - m.t - m.b;
+  const grey = CSSVAR("--muted"), ink = CSSVAR("--fg");
+  const cUls = CSSVAR("--tens"), cSls = CSSVAR("--comp");
+  const lo = 15, hi = 55;
+
+  /* 어떤 검토 하나만 만족시키는 데 필요한 최소 가닥 수를 이분법으로 찾는다.
+     가닥이 늘면 M_Rd 도 늘고 하연 인장도 줄어드니 둘 다 단조다. */
+  const needed = (span, key) => {
+    let a = 4, b = 200;
+    const ok = n => girderSolve({ ...o, span, n }).checks[key];
+    if (ok(a)) return a;
+    if (!ok(b)) return NaN;
+    while (b - a > 1) { const mid = (a + b) >> 1; if (ok(mid)) b = mid; else a = mid; }
+    return b;
+  };
+
+  const uls = [], sls = [];
+  for (let L = lo; L <= hi + 1e-9; L += 2) {
+    uls.push([L, needed(L, "설계휨강도")]);
+    sls.push([L, needed(L, "사용 비균열")]);
+  }
+  const top = Math.max(...uls.concat(sls).map(p => p[1]).filter(Number.isFinite)) * 1.12;
+  const X = v => m.l + (v - lo) / (hi - lo) * pw;
+  const Y = v => m.t + ph - Math.min(v, top) / top * ph;
+
+  svg.appendChild(el("line", { x1: m.l, y1: m.t + ph, x2: m.l + pw, y2: m.t + ph, stroke: grey }));
+  svg.appendChild(el("line", { x1: m.l, y1: m.t, x2: m.l, y2: m.t + ph, stroke: grey }));
+  for (let L = 20; L <= hi; L += 10) {
+    svg.appendChild(el("line", { x1: X(L), y1: m.t, x2: X(L), y2: m.t + ph,
+      stroke: grey, opacity: 0.2 }));
+    svg.appendChild(el("text", { x: X(L), y: m.t + ph + 17, "text-anchor": "middle",
+      fill: grey, "font-size": 10.5 }, L));
+  }
+  for (let i = 0; i <= 4; i++) {
+    const v = top * i / 4;
+    svg.appendChild(el("line", { x1: m.l, y1: Y(v), x2: m.l + pw, y2: Y(v),
+      stroke: grey, opacity: 0.2 }));
+    svg.appendChild(el("text", { x: m.l - 7, y: Y(v) + 4, "text-anchor": "end",
+      fill: grey, "font-size": 10.5 }, v.toFixed(0)));
+  }
+  svg.appendChild(el("text", { x: m.l + pw / 2, y: H - 10, "text-anchor": "middle",
+    fill: grey, "font-size": 11 }, "지간 (m)"));
+
+  const draw = (pts, colour, label, dy) => {
+    const ok = pts.filter(p => Number.isFinite(p[1]));
+    svg.appendChild(path(ok.map(p => [X(p[0]), Y(p[1])]),
+      { stroke: colour, "stroke-width": 2.2 }));
+    svg.appendChild(el("text", { x: m.l + pw + 6, y: m.t + dy, fill: colour,
+      "font-size": 10.5 }, label));
+  };
+  draw(uls, cUls, "극한이 요구", 14);
+  draw(sls, cSls, "사용이 요구", 32);
+  svg.appendChild(el("text", { x: m.l + pw + 6, y: m.t + 52, fill: grey,
+    "font-size": 10 }, "둘 중 큰 쪽을"));
+  svg.appendChild(el("text", { x: m.l + pw + 6, y: m.t + 66, fill: grey,
+    "font-size": 10 }, "넣어야 한다"));
+
+  // 현재 지간과 배치 가닥 수
+  svg.appendChild(el("line", { x1: X(o.span), y1: m.t, x2: X(o.span), y2: m.t + ph,
+    stroke: ink, "stroke-width": 1, "stroke-dasharray": "3 3", opacity: 0.5 }));
+  svg.appendChild(el("circle", { cx: X(o.span), cy: Y(o.n), r: 4, fill: ink }));
+  svg.appendChild(el("text", { x: X(o.span), y: m.t - 8, "font-size": 10,
+    "text-anchor": "middle", fill: ink }, `현재 ${o.span} m · ${o.n}가닥`));
+
+  // 지배가 바뀌는 지간
+  let cross = null;
+  for (let i = 1; i < uls.length; i++) {
+    const d0 = uls[i - 1][1] - sls[i - 1][1], d1 = uls[i][1] - sls[i][1];
+    if (Number.isFinite(d0) && Number.isFinite(d1) && d0 > 0 && d1 <= 0) {
+      cross = uls[i][0]; break;
+    }
+  }
+  svg.appendChild(el("text", { x: m.l + 10, y: m.t + 16, "font-size": 10.5, fill: grey },
+    cross ? `${cross} m 부터 사용한계상태가 요구 가닥 수를 정한다`
+          : "이 조건에서는 한쪽 한계상태가 전 구간에서 더 많은 가닥을 요구한다"));
+}
+
 redrawAll();
 
 const mq = window.matchMedia("(prefers-color-scheme: dark)");
