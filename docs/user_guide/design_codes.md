@@ -72,8 +72,8 @@ KDS 는 단면 해석뿐 아니라 하중조합·전단·사용성·내구성·�
 | `kds24.shear` | 24 14 21 4.1.2 | 변각 트러스 모델 전단 | [전단](design_codes/kds24_shear.md) |
 | `kds24.serviceability` | 24 14 21 4.2, 4.3 | 응력 한계, 균열폭, 처짐, 피로 | [사용성과 피로](design_codes/kds24_serviceability.md) |
 
-전체 설계 흐름을 하나로 엮은 예제는
-[`examples/17_종합설계.py`](../../examples/17_종합설계.py) 를 참고한다.
+KDS 24 로 교량 바닥판을 처음부터 끝까지 설계하는 예제는
+[`examples/17_바닥판설계.py`](../../examples/17_바닥판설계.py) 를 참고한다.
 
 ## 공통 사용법
 

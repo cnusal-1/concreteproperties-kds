@@ -116,7 +116,8 @@ check_durability(exposure_class="EC3", fck=27, cover=40).print_results()
 summarise_detailing(bar="D25", fy=400, fck=27).print_results()
 ```
 
-전체 흐름은 [`examples/17_종합설계.py`](examples/17_종합설계.py) 를 참고한다.
+KDS 24 로 교량 바닥판을 처음부터 끝까지 설계하는 예제는
+[`examples/17_바닥판설계.py`](examples/17_바닥판설계.py) 를 참고한다.
 
 ## 구현 범위
 
@@ -185,7 +186,7 @@ PYTHONPATH=src python -m pytest tests/ -q
 ```shell
 cd examples
 PYTHONPATH=../src:. python 04_휨강도.py
-PYTHONPATH=../src:. python 17_종합설계.py
+PYTHONPATH=../src:. python 17_바닥판설계.py
 PYTHONPATH=../src:. python 05_PM상관도.py --plot
 ```
 
